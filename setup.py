@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import os
 
 
@@ -8,12 +8,12 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name='pyrs',
+    name='pyrs-schema',
     author='Csaba Palankai',
     author_email='csaba.palankai@gmail.com',
-    packages=['pyrs'],
+    packages=find_packages(),
     include_package_data=True,
-    version='0.1.0',
+    version='0.1.1',
     description="Python microservice framework",
     long_description=read('README.rst'),
     classifiers=[
@@ -35,6 +35,6 @@ setup(
     ],
     keywords=('service', 'rest', 'restful', 'swagger', 'resource'),
     zip_safe=False,
-    namespace_packages = ['pyrs'],
+    namespace_packages = ['pyrs', 'pyrs.ext', 'pyrs.schema'],
     install_requires=[r for r in read("requirements.txt").split("\n") if r],
 )
