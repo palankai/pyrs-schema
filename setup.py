@@ -35,6 +35,8 @@ setup(
     ],
     keywords=('service', 'rest', 'restful', 'swagger', 'resource'),
     zip_safe=False,
-    namespace_packages = ['pyrs', 'pyrs.ext', 'pyrs.schema'],
+    namespace_packages = [
+        'pyrs', 'pyrs.ext', 'pyrs.schema', 'pyrs.schema.tests'
+    ],
     install_requires=[r for r in read("requirements.txt").split("\n") if r],
 )
