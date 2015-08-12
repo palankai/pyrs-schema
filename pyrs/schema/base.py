@@ -72,6 +72,8 @@ class Base(_Base):
             schema["type"] = [self._type, "null"]
         if self.get("enum"):
             schema["enum"] = self["enum"]
+        if self.get("format"):
+            schema["format"] = self["format"]
         if self._definitions:
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
