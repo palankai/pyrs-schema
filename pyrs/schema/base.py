@@ -13,28 +13,39 @@ class _Base(object):
 
 class DeclarativeMetaclass(type):
     def __new__(mcls, name, bases, attrs):
-        Attrs = attrs.pop('Attrs', None)
-        attributes = lib.get_public_attributes(Attrs)
-        if "_attrs" in attrs:
-            attrs["_attrs"].update(attributes)
-        else:
-            attrs["_attrs"] = attributes
+        mcls.update_attrs(attrs, "_attrs", "Attrs")
+        mcls.update_attrs(attrs, "_definitions", "Definitions")
         cls = super(DeclarativeMetaclass, mcls).__new__(
             mcls, name, bases, attrs
         )
-        attrs_def = collections.OrderedDict()
-        mro = [c for c in cls.__mro__ if issubclass(c, _Base)]
-        for basecls in reversed(mro):
-            if hasattr(basecls, "_attrs"):
-                attrs_def.update(basecls._attrs)
-        cls._attrs = attrs_def
+        cls._attrs = mcls.get_inherited(cls, "_attrs", _Base)
+        cls._definitions = mcls.get_inherited(cls, "_definitions", _Base)
         return cls
+
+    @classmethod
+    def update_attrs(mcls, attrs, name, clsname):
+        Cls = attrs.pop(clsname, None)
+        fields = lib.get_public_attributes(Cls)
+        if name in attrs:
+            attrs[name].update(fields)
+        else:
+            attrs[name] = fields
+
+    @classmethod
+    def get_inherited(mcls, cls, name, base):
+        fields = collections.OrderedDict()
+        mro = [c for c in cls.__mro__ if issubclass(c, base)]
+        for basecls in reversed(mro):
+            if hasattr(basecls, name):
+                fields.update(getattr(basecls, name))
+        return fields
 
 
 @six.add_metaclass(DeclarativeMetaclass)
 class Base(_Base):
     _type = None
     _attrs = {}
+    _definitions = {}
     _creation_index = 0
 
     def __init__(self, **attrs):
@@ -61,6 +72,11 @@ class Base(_Base):
             schema["type"] = [self._type, "null"]
         if self.get("enum"):
             schema["enum"] = self["enum"]
+        if self._definitions:
+            definitions = collections.OrderedDict()
+            for name, prop in self._definitions.items():
+                definitions[prop.get("name", name)] = prop.get_schema()
+            schema["definitions"] = definitions
         return schema
 
     def loads(self, text):

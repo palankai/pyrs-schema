@@ -35,3 +35,12 @@ class Enum(base.Base):
         if self.get("enum"):
             schema["enum"] = self["enum"]
         return schema
+
+
+class Ref(base.Base):
+
+    def get_schema(self):
+        schema = super(Ref, self).get_schema()
+        schema.pop("type")
+        assert not schema
+        return {"$ref": "#/definitions/"+self["ref"]}
