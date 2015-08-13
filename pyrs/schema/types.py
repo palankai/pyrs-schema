@@ -28,8 +28,22 @@ class Array(base.Base):
 
 
 class Enum(base.Base):
+    """JSON generic enum class
+
+    :param enum: list of possible values
+    :type enum: list
+
+    >>> t =Enum(enum=["a", "b"]
+    >>> t.get_schema()
+    {"enum": ["a", "b"]}
+    """
 
     def get_schema(self):
+        """Ensure the generic schema, remove `types`
+
+        :return: Gives back the schame
+        :rtype: dict
+        """
         schema = super(Enum, self).get_schema()
         schema.pop("type")
         if self.get("enum"):
