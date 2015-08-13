@@ -32,16 +32,12 @@ class Enum(base.Base):
 
     :param enum: list of possible values
     :type enum: list
-
-    >>> t =Enum(enum=["a", "b"]
-    >>> t.get_schema()
-    {"enum": ["a", "b"]}
     """
 
     def get_schema(self):
         """Ensure the generic schema, remove `types`
 
-        :return: Gives back the schame
+        :return: Gives back the schema
         :rtype: dict
         """
         schema = super(Enum, self).get_schema()
