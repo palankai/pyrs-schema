@@ -4,7 +4,7 @@ from .. import schema
 from .. import types
 
 
-class TestSchema(unittest.TestCase):
+class TestSchemaValidation(unittest.TestCase):
 
     def test_declarative_schema(self):
         class MyObject(schema.Schema):
@@ -125,3 +125,62 @@ class TestSchema(unittest.TestCase):
         )
         t.validate({"String": "hello", "sub": {"int": 12}})
         t.validate({"String": "hello", "sub": None})
+
+
+class TestSchemaToPython(unittest.TestCase):
+
+    def test_schema_to_python(self):
+        class MyObject(schema.Schema):
+            _properties = {
+                "int": types.Integer()
+            }
+            string = types.String(name="NewName")
+
+        t = MyObject()
+        p = t.to_python({"int": 1, "NewName": "hi", 'x': 'y'})
+        self.assertEqual(p, {"int": 1, "string": "hi", 'x': 'y'})
+
+    def test_special_type(self):
+
+        class Spec(types.String):
+            def to_python(self, src):
+                if src.lower() == "yes":
+                    return True
+                else:
+                    return False
+
+        class MyObject(schema.Schema):
+            username = types.String()
+            can_login = Spec()
+
+        t = MyObject()
+        p = t.to_python({'username': 'user', 'can_login': 'Yes'})
+        self.assertEqual(p, {'username': 'user', 'can_login': True})
+
+
+class TestSchemaToJson(unittest.TestCase):
+
+    def test_schema_to_json(self):
+        class MyObject(schema.Schema):
+            _properties = {
+                "int": types.Integer()
+            }
+            string = types.String(name="NewName")
+
+        t = MyObject()
+        p = t.to_json({"int": 1, "string": "hi", "unknown": "x"})
+        self.assertEqual(p, {"int": 1, "NewName": "hi", 'unknown': 'x'})
+
+    def test_special_type(self):
+
+        class Spec(types.String):
+            def to_json(self, src):
+                return "*******"
+
+        class MyObject(schema.Schema):
+            string = types.String()
+            password = Spec()
+
+        t = MyObject()
+        p = t.to_json({'username': 'user', 'password': 'secret'})
+        self.assertEqual(p, {'username': 'user', 'password': '*******'})

@@ -7,6 +7,10 @@ import six
 from . import lib
 
 
+class NA:
+    pass
+
+
 class _Base(object):
     pass
 
@@ -67,6 +71,12 @@ class Base(_Base):
         return self.attrs.get(name, default)
 
     def get_schema(self):
+        if hasattr(self, "_schema"):
+            return self._schema
+        self._schema = self._get_schema()
+        return self._schema
+
+    def _get_schema(self):
         schema = {"type": self._type}
         if self.get("null"):
             schema["type"] = [self._type, "null"]
@@ -84,21 +94,54 @@ class Base(_Base):
     def loads(self, text):
         obj = json.loads(text)
         self.validate(obj)
-        return obj
+        return self.to_python(obj)
 
-    def dumps(self, obj):
-        self.validate(obj)
+    def dumps(self, obj=NA):
+        self.validate(self.to_json(obj))
         return json.dumps(obj)
 
+    def get_validator(self):
+        if hasattr(self, "_validator"):
+            return self._validator
+        self._validator = self.make_validator()
+        return self._validator
+
+    def make_validator(self):
+        return _make_validator(self.get_schema())
+
     def validate(self, obj):
-        jsonschema.validate(obj, self.get_schema())
+        self.get_validator().validate(obj)
 
     def to_python(self, value):
-        """Convert the value to a real python object
-        """
+        """Convert the value to a real python object"""
         return value
 
     def to_json(self, value):
-        """Convert the value to a JSON compatible value
-        """
+        """Convert the value to a JSON compatible value"""
         return value
+
+    def invalidate(self):
+        if hasattr(self, "_schema"):
+            del self._schema
+        if hasattr(self, "_validator"):
+            del self._validator
+
+    def extend(self, **properties):
+        pass
+
+    def update(self, **values):
+        pass
+
+
+def _make_validator(schema):
+    formats = jsonschema.draft4_format_checker.checkers.keys()
+    format_checker = jsonschema.FormatChecker(formats)
+    validator_funcs = jsonschema.Draft4Validator.VALIDATORS
+    meta_schema = jsonschema.Draft4Validator.META_SCHEMA
+    validator_cls = jsonschema.validators.create(
+        meta_schema=meta_schema,
+        validators=validator_funcs,
+        version="draft4",
+    )
+    validator_cls.check_schema(schema)
+    return validator_cls(schema, format_checker=format_checker)

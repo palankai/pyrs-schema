@@ -6,8 +6,8 @@ from . import base
 class String(base.Base):
     _type = "string"
 
-    def get_schema(self):
-        schema = super(String, self).get_schema()
+    def _get_schema(self):
+        schema = super(String, self)._get_schema()
         if self.get("pattern"):
             schema["pattern"] = self["pattern"]
         return schema
@@ -32,8 +32,8 @@ class Array(base.Base):
 class Date(String):
 
     def to_python(self, value):
-        y,m,d = value.split("-")
-        return datetime.date(y,m,d)
+        y, m, d = value.split("-")
+        return datetime.date(y, m, d)
 
     def to_json(self, value):
         if isinstance(value, datetime.date):
@@ -47,13 +47,13 @@ class Enum(base.Base):
     :type enum: list
     """
 
-    def get_schema(self):
+    def _get_schema(self):
         """Ensure the generic schema, remove `types`
 
         :return: Gives back the schema
         :rtype: dict
         """
-        schema = super(Enum, self).get_schema()
+        schema = super(Enum, self)._get_schema()
         schema.pop("type")
         if self.get("enum"):
             schema["enum"] = self["enum"]
@@ -62,8 +62,8 @@ class Enum(base.Base):
 
 class Ref(base.Base):
 
-    def get_schema(self):
-        schema = super(Ref, self).get_schema()
+    def _get_schema(self):
+        schema = super(Ref, self)._get_schema()
         schema.pop("type")
         assert not schema
         return {"$ref": "#/definitions/"+self["ref"]}

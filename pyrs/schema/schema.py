@@ -39,10 +39,27 @@ class Schema(base.Base):
     _type = "object"
     _properties = {}
 
-    def get_schema(self):
-        schema = super(Schema, self).get_schema()
+    def _get_schema(self):
+        schema = super(Schema, self)._get_schema()
         properties = collections.OrderedDict()
         for key, prop in self._properties.items():
             properties[prop.get("name", key)] = prop.get_schema()
         schema["properties"] = properties
         return schema
+
+    def to_python(self, src):
+        res = {}
+        for field, schema in self._properties.items():
+            name = schema.get('name', field)
+            if name in src:
+                res[field] = schema.to_python(src.pop(name))
+        res.update(src)
+        return res
+
+    def to_json(self, src):
+        res = {}
+        for field in list(set(src) & set(self._properties)):
+            schema = self._properties.get(field)
+            res[schema.get('name', field)] = schema.to_json(src.pop(field))
+        res.update(src)
+        return res
