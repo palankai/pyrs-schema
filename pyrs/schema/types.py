@@ -1,3 +1,5 @@
+import datetime
+
 from . import base
 
 
@@ -25,6 +27,17 @@ class Boolean(base.Base):
 
 class Array(base.Base):
     _type = "array"
+
+
+class Date(String):
+
+    def to_python(self, value):
+        y,m,d = value.split("-")
+        return datetime.date(y,m,d)
+
+    def to_json(self, value):
+        if isinstance(value, datetime.date):
+            return value.isoformat()
 
 
 class Enum(base.Base):

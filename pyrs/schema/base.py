@@ -92,3 +92,13 @@ class Base(_Base):
 
     def validate(self, obj):
         jsonschema.validate(obj, self.get_schema())
+
+    def to_python(self, value):
+        """Convert the value to a real python object
+        """
+        return value
+
+    def to_json(self, value):
+        """Convert the value to a JSON compatible value
+        """
+        return value
