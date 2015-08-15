@@ -5,6 +5,7 @@ import jsonschema
 
 from .. import schema
 from .. import types
+from .. import exceptions
 
 
 class TestString(unittest.TestCase):
@@ -118,6 +119,9 @@ class TestDate(unittest.TestCase):
         t = types.Date()
 
         t.validate(datetime.date(2012, 12, 24))
+        t.validate("2012-12-24")
+        with self.assertRaises(exceptions.ValidationError):
+            t.validate('crappy')
 
     def test_serialize(self):
         t = types.Date()

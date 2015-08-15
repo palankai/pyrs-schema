@@ -6,10 +6,7 @@ import jsonschema
 import six
 
 from . import lib
-
-
-class NA:
-    pass
+from . import formats
 
 
 class _Base(object):
@@ -152,11 +149,21 @@ def _validate_type_draft4(validator, types, instance, schema):
     if (
             'string' in types and
             'string' in schema.get('type') and
-            schema.get('format') == 'date'
+            schema.get('format') in ['date', 'datetime', 'time', 'duration']
     ):
         if isinstance(instance, six.string_types):
             return
-        if isinstance(instance, datetime.date):
+        if schema.get('format') == 'date' and \
+                isinstance(instance, datetime.date):
+            return
+        if schema.get('format') == 'datetime' and \
+                isinstance(instance, datetime.datetime):
+            return
+        if schema.get('format') == 'time' and \
+                isinstance(instance, datetime.time):
+            return
+        if schema.get('format') == 'timestamp' and \
+                isinstance(instance, (datetime.timedelta, int, float)):
             return
 
         json_format_name = schema.get('format')
@@ -172,13 +179,8 @@ def _validate_type_draft4(validator, types, instance, schema):
         yield jsonschema.ValidationError(_types_msg(instance, types))
 
 
-def date_format_checker(instance):
-    return isinstance(instance, datetime.date)
-
-
 def _make_validator(schema):
-    formats = jsonschema.draft4_format_checker.checkers.keys()
-    format_checker = jsonschema.FormatChecker(formats)
+    format_checker = jsonschema.FormatChecker(formats.draft4_format_checkers)
     validator_funcs = jsonschema.Draft4Validator.VALIDATORS
     validator_funcs[u'type'] = _validate_type_draft4
     meta_schema = jsonschema.Draft4Validator.META_SCHEMA
