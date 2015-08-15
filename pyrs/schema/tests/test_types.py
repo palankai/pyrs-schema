@@ -1,7 +1,9 @@
+import datetime
 import unittest
 
 import jsonschema
 
+from .. import schema
 from .. import types
 
 
@@ -108,3 +110,29 @@ class TestArray(unittest.TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             t.validate("Hello")
+
+
+class TestDate(unittest.TestCase):
+
+    def test_validation(self):
+        t = types.Date()
+
+        t.validate(datetime.date(2012, 12, 24))
+
+    def test_serialize(self):
+        t = types.Date()
+        v = t.dumps(datetime.date(2012, 12, 24))
+        self.assertEqual(v, '"2012-12-24"')
+
+    def test_loads(self):
+        t = types.Date()
+
+        v = t.loads('"2012-12-24"')
+        self.assertEqual(v, datetime.date(2012, 12, 24))
+
+    def test_complex(self):
+        class MySchema(schema.Schema):
+            date = types.Date()
+        t = MySchema()
+        t.validate({"date": datetime.date(2012, 12, 24)})
+        t.dumps({"date": datetime.date(2012, 12, 24)})

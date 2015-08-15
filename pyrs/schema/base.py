@@ -1,4 +1,5 @@
 import collections
+import datetime
 import json
 
 import jsonschema
@@ -96,8 +97,9 @@ class Base(_Base):
         self.validate(obj)
         return self.to_python(obj)
 
-    def dumps(self, obj=NA):
-        self.validate(self.to_json(obj))
+    def dumps(self, obj):
+        obj = self.to_json(obj)
+        self.validate(obj)
         return json.dumps(obj)
 
     def get_validator(self):
@@ -133,10 +135,52 @@ class Base(_Base):
         pass
 
 
+def _types_msg(instance, types, hint=''):
+    reprs = []
+    for type in types:
+        try:
+            reprs.append(repr(type["name"]))
+        except Exception:
+            reprs.append(repr(type))
+    return "%r is not of type %s%s" % (instance, ", ".join(reprs), hint)
+
+
+def _validate_type_draft4(validator, types, instance, schema):
+    if isinstance(types, six.string_types):
+        types = [types]
+
+    if (
+            'string' in types and
+            'string' in schema.get('type') and
+            schema.get('format') == 'date'
+    ):
+        if isinstance(instance, six.string_types):
+            return
+        if isinstance(instance, datetime.date):
+            return
+
+        json_format_name = schema.get('format')
+        datetime_type_name = json_format_name.replace('-', '')
+        hint = ' (for format %r strings, use a datetime.%s)' % (
+            json_format_name, datetime_type_name
+        )
+        yield jsonschema.ValidationError(
+            _types_msg(instance, types, hint)
+        )
+
+    if not any(validator.is_type(instance, type) for type in types):
+        yield jsonschema.ValidationError(_types_msg(instance, types))
+
+
+def date_format_checker(instance):
+    return isinstance(instance, datetime.date)
+
+
 def _make_validator(schema):
     formats = jsonschema.draft4_format_checker.checkers.keys()
     format_checker = jsonschema.FormatChecker(formats)
     validator_funcs = jsonschema.Draft4Validator.VALIDATORS
+    validator_funcs[u'type'] = _validate_type_draft4
     meta_schema = jsonschema.Draft4Validator.META_SCHEMA
     validator_cls = jsonschema.validators.create(
         meta_schema=meta_schema,

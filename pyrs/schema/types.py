@@ -30,10 +30,11 @@ class Array(base.Base):
 
 
 class Date(String):
+    _attrs = {"format": "date"}
 
     def to_python(self, value):
         y, m, d = value.split("-")
-        return datetime.date(y, m, d)
+        return datetime.date(int(y), int(m), int(d))
 
     def to_json(self, value):
         if isinstance(value, datetime.date):
