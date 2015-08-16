@@ -41,10 +41,16 @@ class Schema(base.Base):
 
     def make_schema(self):
         schema = super(Schema, self).make_schema()
+        required = []
         properties = collections.OrderedDict()
         for key, prop in self._properties.items():
-            properties[prop.get("name", key)] = prop.get_schema()
+            name = prop.get("name", key)
+            properties[name] = prop.get_schema()
+            if prop.get('required'):
+                required.append(name)
         schema["properties"] = properties
+        if required:
+            schema['required'] = required
         return schema
 
     def to_python(self, src):

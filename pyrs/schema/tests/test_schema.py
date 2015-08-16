@@ -26,6 +26,27 @@ class TestSchemaValidation(unittest.TestCase):
             }
         )
 
+    def test_declarative_schema_required(self):
+        class MyObject(schema.Schema):
+            _properties = {
+                "int": types.Integer(required=True)
+            }
+            string = types.String(name="String", required=True)
+
+        t = MyObject()
+
+        self.assertEqual(
+            t.get_schema(),
+            {
+                "type": "object",
+                "properties": {
+                    "int": {"type": "integer"},
+                    "String": {"type": "string"},
+                },
+                "required": ['int', 'String']
+            }
+        )
+
     def test_declarative_schema_validation(self):
         class MyObject(schema.Schema):
             string = types.String(name="String")

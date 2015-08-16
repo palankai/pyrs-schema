@@ -82,6 +82,10 @@ class Base(_Base):
             schema["enum"] = self["enum"]
         if self.get("format"):
             schema["format"] = self["format"]
+        if self.get("title"):
+            schema["title"] = self["title"]
+        if self.get("description"):
+            schema["description"] = self["description"]
         if self._definitions:
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
@@ -89,12 +93,12 @@ class Base(_Base):
             schema["definitions"] = definitions
         return schema
 
-    def loads(self, text):
+    def load(self, text):
         obj = json.loads(text)
         self.validate(obj)
         return self.to_python(obj)
 
-    def dumps(self, obj):
+    def dump(self, obj):
         obj = self.to_json(obj)
         self.validate(obj)
         return json.dumps(obj)

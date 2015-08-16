@@ -26,18 +26,18 @@ class TestBase(unittest.TestCase):
         self.assertEqual(b.get("attr"), 1)
         self.assertEqual(list(b.keys()), ["attr"])
 
-    def test_loads(self):
+    def test_load(self):
         b = base.Base()
         with mock.patch.object(b, "validate") as validate:
-            res = b.loads('"Hello"')
+            res = b.load('"Hello"')
 
         self.assertEqual(res, "Hello")
         validate.assert_called_with("Hello")
 
-    def test_dumps(self):
+    def test_dump(self):
         b = base.Base()
         with mock.patch.object(b, "validate") as validate:
-            res = b.dumps("Hello")
+            res = b.dump("Hello")
 
         self.assertEqual(res, '"Hello"')
         validate.assert_called_with("Hello")
@@ -79,6 +79,30 @@ class TestBase(unittest.TestCase):
         t = MyType()
 
         self.assertEqual(t.get_schema(), {"type": ["string", "null"]})
+
+    def test_title_description(self):
+        class MyType(base.Base):
+            _type = "string"
+        t = MyType(title="t", description='d')
+
+        self.assertEqual(
+            t.get_schema(),
+            {"type": "string", "title": "t", "description": 'd'}
+        )
+
+    def test_title_description_declarative(self):
+        class MyType(base.Base):
+            _type = "string"
+
+            class Attrs:
+                title = 't'
+                description = 'd'
+        t = MyType()
+
+        self.assertEqual(
+            t.get_schema(),
+            {"type": "string", "title": "t", "description": 'd'}
+        )
 
 
 class TestDeclarativeBase(unittest.TestCase):
