@@ -13,7 +13,7 @@ setup(
     author_email='csaba.palankai@gmail.com',
     packages=find_packages(),
     include_package_data=True,
-    version='0.3.0',
+    version='0.3.1',
     description="Python microservice framework",
     long_description=read('README.rst'),
     classifiers=[
