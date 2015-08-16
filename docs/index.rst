@@ -3,8 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to pyrs-schema's documentation!
-=======================================
+===========
+pyrs schema
+===========
 
 This framework is the base part of pyrs microframework.
 It's introduce the way to define schemas.
@@ -18,29 +19,34 @@ Example usage
 
    from pyrs import schema
 
-   class User(schema.Object):
+   class UserSchema(schema.Schema):
        username = schema.String(required=True, minlen=3)
        password = schema.String(required=True, minlen=6)
        email = schema.Email()
-       date_of_birth = schema.Date()
+       date_of_birth = schema.Date(name='dateOfBirth')
 
        class Attrs:
            additional=True
 
-   user_schema = User()
-   user = user_schema.loads(<jsonstring>)
+   user_schema = UserSchema()
+   user = user_schema.load(<jsonstring>)
    user_str = user_schema.dumps(user)
 
 
-Contents:
+Modules
+-------
 
 .. toctree::
    :maxdepth: 2
 
+   base
    types
+   schema
+   formats
+   exceptions
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`

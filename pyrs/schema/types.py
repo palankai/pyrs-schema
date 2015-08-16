@@ -1,3 +1,7 @@
+"""
+This module introduce the basic schema types.
+"""
+
 import datetime
 import json
 

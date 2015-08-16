@@ -1,8 +1,8 @@
 ===========
-Basic types
+Base module
 ===========
 
-.. automodule:: schema.types
+.. automodule:: schema.base
     :members:
     :undoc-members:
     :show-inheritance:
