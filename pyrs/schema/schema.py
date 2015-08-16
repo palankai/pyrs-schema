@@ -13,7 +13,7 @@ class DeclarativeSchemaMetaclass(base.DeclarativeMetaclass):
                 current_properties.append((key, value))
                 attrs.pop(key)
         current_properties.sort(key=lambda x: x[1]._creation_index)
-        if "_properties" in attrs:
+        if "_properties" in attrs and attrs['_properties'] is not None:
             attrs['_properties'].update(
                 collections.OrderedDict(current_properties)
             )
@@ -37,7 +37,7 @@ class DeclarativeSchemaMetaclass(base.DeclarativeMetaclass):
 @six.add_metaclass(DeclarativeSchemaMetaclass)
 class Schema(base.Base):
     _type = "object"
-    _properties = {}
+    _properties = None
 
     def make_schema(self):
         schema = super(Schema, self).make_schema()
@@ -50,7 +50,7 @@ class Schema(base.Base):
                 required.append(name)
         schema["properties"] = properties
         if required:
-            schema['required'] = required
+            schema['required'] = sorted(required)
         return schema
 
     def to_python(self, src):
@@ -69,3 +69,18 @@ class Schema(base.Base):
             res[schema.get('name', field)] = schema.to_json(src.pop(field))
         res.update(src)
         return res
+
+    def get_properties_by_name(self, name):
+        by_name = {}
+        for field, prop in self._properties.items():
+            by_name[prop.get('name', field)] = prop
+        return by_name.get(name)
+
+    def load_form(self, form):
+        by_name = {}
+        for field, prop in self._properties.items():
+            by_name[prop.get('name', field)] = prop
+        for field in list(set(form) & set(by_name)):
+            form[field] = by_name[field].to_object(form[field])
+        self.validate(form)
+        return self.to_python(form)

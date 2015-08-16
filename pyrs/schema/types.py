@@ -17,41 +17,24 @@ class String(base.Base):
             schema["pattern"] = self["pattern"]
         return schema
 
+    def to_object(self, value):
+        return value
+
 
 class Integer(base.Base):
     _type = "integer"
-
-    def to_python(self, value):
-        if isinstance(value, six.string_types):
-            return json.loads(value)
-        return value
 
 
 class Number(base.Base):
     _type = "number"
 
-    def to_python(self, value):
-        if isinstance(value, six.string_types):
-            return json.loads(value)
-        return value
-
 
 class Boolean(base.Base):
     _type = "boolean"
 
-    def to_python(self, value):
-        if isinstance(value, six.string_types):
-            return json.loads(value)
-        return value
-
 
 class Array(base.Base):
     _type = "array"
-
-    def to_python(self, value):
-        if isinstance(value, six.string_types):
-            return json.loads(value)
-        return value
 
 
 class Date(String):

@@ -53,20 +53,20 @@ class Base(_Base):
     def __init__(self, **attrs):
         self._creation_index = Base._creation_index
         Base._creation_index += 1
-        self.attrs = self.__class__._attrs.copy()
-        self.attrs.update(attrs)
+        self._attrs = self.__class__._attrs.copy()
+        self._attrs.update(attrs)
 
     def __getitem__(self, name):
-        return self.attrs[name]
+        return self._attrs[name]
 
     def __setitem__(self, name, value):
-        self.attrs[name] = value
+        self._attrs[name] = value
 
     def keys(self):
-        return self.attrs.keys()
+        return self._attrs.keys()
 
     def get(self, name, default=None):
-        return self.attrs.get(name, default)
+        return self._attrs.get(name, default)
 
     def get_schema(self):
         if hasattr(self, "_schema"):
@@ -122,6 +122,10 @@ class Base(_Base):
     def to_json(self, value):
         """Convert the value to a JSON compatible value"""
         return value
+
+    def to_object(self, value):
+        """Convert the value to python object, make validation possible"""
+        return json.loads(value)
 
     def invalidate(self):
         if hasattr(self, "_schema"):

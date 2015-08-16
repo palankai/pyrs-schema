@@ -8,9 +8,7 @@ class TestSchemaValidation(unittest.TestCase):
 
     def test_declarative_schema(self):
         class MyObject(schema.Schema):
-            _properties = {
-                "int": types.Integer()
-            }
+            num = types.Integer()
             string = types.String(name="String")
 
         t = MyObject()
@@ -20,7 +18,7 @@ class TestSchemaValidation(unittest.TestCase):
             {
                 "type": "object",
                 "properties": {
-                    "int": {"type": "integer"},
+                    "num": {"type": "integer"},
                     "String": {"type": "string"},
                 }
             }
@@ -28,23 +26,21 @@ class TestSchemaValidation(unittest.TestCase):
 
     def test_declarative_schema_required(self):
         class MyObject(schema.Schema):
-            _properties = {
-                "int": types.Integer(required=True)
-            }
+            num = types.Integer(required=True)
             string = types.String(name="String", required=True)
 
         t = MyObject()
-
+        s = t.get_schema()
+        expected = {
+            "type": "object",
+            "properties": {
+                "num": {"type": "integer"},
+                "String": {"type": "string"},
+            },
+            "required": ['String', 'num']
+        }
         self.assertEqual(
-            t.get_schema(),
-            {
-                "type": "object",
-                "properties": {
-                    "int": {"type": "integer"},
-                    "String": {"type": "string"},
-                },
-                "required": ['int', 'String']
-            }
+            s, expected
         )
 
     def test_declarative_schema_validation(self):
@@ -152,14 +148,12 @@ class TestSchemaToPython(unittest.TestCase):
 
     def test_schema_to_python(self):
         class MyObject(schema.Schema):
-            _properties = {
-                "int": types.Integer()
-            }
+            num = types.Integer()
             string = types.String(name="NewName")
 
         t = MyObject()
-        p = t.to_python({"int": 1, "NewName": "hi", 'x': 'y'})
-        self.assertEqual(p, {"int": 1, "string": "hi", 'x': 'y'})
+        p = t.to_python({"num": 1, "NewName": "hi", 'x': 'y'})
+        self.assertEqual(p, {"num": 1, "string": "hi", 'x': 'y'})
 
     def test_special_type(self):
 
@@ -183,14 +177,12 @@ class TestSchemaToJson(unittest.TestCase):
 
     def test_schema_to_json(self):
         class MyObject(schema.Schema):
-            _properties = {
-                "int": types.Integer()
-            }
+            num = types.Integer()
             string = types.String(name="NewName")
 
         t = MyObject()
-        p = t.to_json({"int": 1, "string": "hi", "unknown": "x"})
-        self.assertEqual(p, {"int": 1, "NewName": "hi", 'unknown': 'x'})
+        p = t.to_json({"num": 1, "string": "hi", "unknown": "x"})
+        self.assertEqual(p, {"num": 1, "NewName": "hi", 'unknown': 'x'})
 
     def test_special_type(self):
 
@@ -205,3 +197,33 @@ class TestSchemaToJson(unittest.TestCase):
         t = MyObject()
         p = t.to_json({'username': 'user', 'password': 'secret'})
         self.assertEqual(p, {'username': 'user', 'password': '*******'})
+
+
+class TestSchemaLoadForm(unittest.TestCase):
+
+    def test_load_form(self):
+        class MySub(schema.Schema):
+            sub = types.Integer()
+
+        class MyObject(schema.Schema):
+            num = types.Integer()
+            string = types.String(name="NewName")
+            arr = types.Array()
+            sub = MySub()
+
+        t = MyObject()
+        form = {
+            'num': '1',
+            'NewName': 'hi',
+            'sub': '{"sub": 1}',
+            'arr': '[1, 2, "hi"]',
+            'unknown': '{"any": "value"}'
+        }
+        r = t.load_form(form)
+        self.assertEqual(r, {
+            "num": 1,
+            "string": "hi",
+            'sub': {'sub': 1},
+            'arr': [1, 2, 'hi'],
+            'unknown': '{"any": "value"}'
+        })
