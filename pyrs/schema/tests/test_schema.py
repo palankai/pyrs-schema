@@ -31,7 +31,6 @@ class TestSchemaValidation(unittest.TestCase):
 
         t = MyObject()
         s = t.get_schema()
-        # import pudb; pudb.set_trace()
         expected = {
             "type": "object",
             "properties": {

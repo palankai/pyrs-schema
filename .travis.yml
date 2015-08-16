@@ -7,8 +7,8 @@ install:
   - pip install -r requirements.txt
   - pip install -r requirements-tests.txt
 script:
-  - ./test_set_trace.sh
   - coverage run --source=pyrs -m unittest discover pyrs -v
   - flake8 pyrs/
+  - ./test_set_trace.sh
 after_success:
   coveralls
