@@ -125,12 +125,6 @@ class Base(_Base):
         if hasattr(self, "_validator"):
             del self._validator
 
-    def extend(self, **properties):
-        pass
-
-    def update(self, **values):
-        pass
-
 
 def _types_msg(instance, types, hint=''):
     reprs = []

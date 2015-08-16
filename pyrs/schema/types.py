@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import isodate
 import six
@@ -20,17 +21,37 @@ class String(base.Base):
 class Integer(base.Base):
     _type = "integer"
 
+    def to_python(self, value):
+        if isinstance(value, six.string_types):
+            return json.loads(value)
+        return value
+
 
 class Number(base.Base):
     _type = "number"
+
+    def to_python(self, value):
+        if isinstance(value, six.string_types):
+            return json.loads(value)
+        return value
 
 
 class Boolean(base.Base):
     _type = "boolean"
 
+    def to_python(self, value):
+        if isinstance(value, six.string_types):
+            return json.loads(value)
+        return value
+
 
 class Array(base.Base):
     _type = "array"
+
+    def to_python(self, value):
+        if isinstance(value, six.string_types):
+            return json.loads(value)
+        return value
 
 
 class Date(String):
@@ -116,6 +137,8 @@ class Duration(String):
 class TimeDelta(Number):
 
     def to_python(self, value):
+        if isinstance(value, six.string_types):
+            value = json.loads(value)
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         if isinstance(value, datetime.timedelta):
