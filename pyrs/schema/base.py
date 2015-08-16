@@ -71,10 +71,10 @@ class Base(_Base):
     def get_schema(self):
         if hasattr(self, "_schema"):
             return self._schema
-        self._schema = self._get_schema()
+        self._schema = self.make_schema()
         return self._schema
 
-    def _get_schema(self):
+    def make_schema(self):
         schema = {"type": self._type}
         if self.get("null"):
             schema["type"] = [self._type, "null"]

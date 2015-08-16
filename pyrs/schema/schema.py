@@ -39,8 +39,8 @@ class Schema(base.Base):
     _type = "object"
     _properties = {}
 
-    def _get_schema(self):
-        schema = super(Schema, self)._get_schema()
+    def make_schema(self):
+        schema = super(Schema, self).make_schema()
         properties = collections.OrderedDict()
         for key, prop in self._properties.items():
             properties[prop.get("name", key)] = prop.get_schema()

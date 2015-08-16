@@ -10,8 +10,8 @@ from . import formats
 class String(base.Base):
     _type = "string"
 
-    def _get_schema(self):
-        schema = super(String, self)._get_schema()
+    def make_schema(self):
+        schema = super(String, self).make_schema()
         if self.get("pattern"):
             schema["pattern"] = self["pattern"]
         return schema
@@ -137,13 +137,13 @@ class Enum(base.Base):
     :type enum: list
     """
 
-    def _get_schema(self):
+    def make_schema(self):
         """Ensure the generic schema, remove `types`
 
         :return: Gives back the schema
         :rtype: dict
         """
-        schema = super(Enum, self)._get_schema()
+        schema = super(Enum, self).make_schema()
         schema.pop("type")
         if self.get("enum"):
             schema["enum"] = self["enum"]
@@ -152,8 +152,8 @@ class Enum(base.Base):
 
 class Ref(base.Base):
 
-    def _get_schema(self):
-        schema = super(Ref, self)._get_schema()
+    def make_schema(self):
+        schema = super(Ref, self).make_schema()
         schema.pop("type")
         assert not schema
         return {"$ref": "#/definitions/"+self["ref"]}
