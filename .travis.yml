@@ -4,8 +4,8 @@ python:
   - "3.3"
   - "3.4"
 install:
-  - pip install -r deploy/requirements.txt
-  - pip install -r deploy/requirements-tests.txt
+  - pip install -r requirements.txt
+  - pip install -r requirements-tests.txt
 script:
   - test_set_trace.sh
   - coverage run --source=pyrs -m unittest discover pyrs -v
