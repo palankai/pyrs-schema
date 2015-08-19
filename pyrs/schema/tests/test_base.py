@@ -4,21 +4,11 @@ import jsonschema
 import mock
 
 from .. import base
+from .. import exceptions
+from .. import types
 
 
 class TestBase(unittest.TestCase):
-
-    def test_creation_index(self):
-        base.Base._creation_index = 0
-
-        b0 = base.Base()
-        b1 = base.Base()
-        b2 = base.Base()
-
-        self.assertEqual(b0._creation_index, 0)
-        self.assertEqual(b1._creation_index, 1)
-        self.assertEqual(b2._creation_index, 2)
-        self.assertEqual(base.Base._creation_index, 3)
 
     def test_attrs(self):
         b = base.Base(attr=1)
@@ -28,7 +18,7 @@ class TestBase(unittest.TestCase):
 
     def test_load(self):
         b = base.Base()
-        with mock.patch.object(b, "validate") as validate:
+        with mock.patch.object(b, "validate_json") as validate:
             res = b.load('"Hello"')
 
         self.assertEqual(res, "Hello")
@@ -36,7 +26,7 @@ class TestBase(unittest.TestCase):
 
     def test_dump(self):
         b = base.Base()
-        with mock.patch.object(b, "validate") as validate:
+        with mock.patch.object(b, "validate_json") as validate:
             res = b.dump("Hello")
 
         self.assertEqual(res, '"Hello"')
@@ -117,3 +107,90 @@ class TestDeclarativeBase(unittest.TestCase):
         t = MyType()
 
         self.assertEqual(t.get_schema(), {"type": ["string", "null"]})
+
+
+class TestSchema(unittest.TestCase):
+
+    def test_creation_index(self):
+        base.Schema._creation_index = 0
+
+        b0 = base.Schema()
+        b1 = base.Base()
+        b2 = base.Base()
+
+        self.assertEqual(b0._creation_index, 0)
+        self.assertEqual(b1._creation_index, 1)
+        self.assertEqual(b2._creation_index, 2)
+        self.assertEqual(base.Base._creation_index, 3)
+
+    def test_validation(self):
+        class MySchema(base.Schema):
+            _schema = {
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            }
+
+        s = MySchema()
+        s.validate({'num': 12})
+        with self.assertRaises(exceptions.ValidationError):
+            s.validate({'num': 12.1})
+
+    def test_load(self):
+        class MySchema(base.Schema):
+            _schema = {
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            }
+
+        s = MySchema()
+        res = s.load('{"num": 12}')
+        self.assertEqual(res, {'num': 12})
+
+    def test_dump(self):
+        class MySchema(base.Schema):
+            _schema = {
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            }
+
+        s = MySchema()
+        res = s.dump({'num': 12})
+        self.assertEqual(res, '{"num": 12}')
+
+    def test_dump_as_field(self):
+        class MyType(base.Schema):
+            _schema = {
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            }
+
+        class MyObject(types.Object):
+            code = MyType()
+
+        s = MyObject()
+        res = s.dump({'code': {'num': 12}})
+        self.assertEqual(res, '{"code": {"num": 12}}')
+
+    def test_load_as_field(self):
+        class MyType(base.Schema):
+            _schema = {
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            }
+
+        class MyObject(types.Object):
+            code = MyType()
+
+        s = MyObject()
+        res = s.load('{"code": {"num": 12}}')
+        self.assertEqual(res, {'code': {'num': 12}})

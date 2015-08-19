@@ -1,3 +1,7 @@
+class NA:
+    pass
+
+
 def get_public_attributes(cls):
     if not cls:
         return {}

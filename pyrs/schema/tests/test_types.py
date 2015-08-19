@@ -4,7 +4,6 @@ import unittest
 import jsonschema
 
 from .. import types
-from .. import exceptions
 
 
 class TestString(unittest.TestCase):
@@ -119,7 +118,7 @@ class TestDate(unittest.TestCase):
 
         t.validate(datetime.date(2012, 12, 24))
         t.validate("2012-12-24")
-        with self.assertRaises(exceptions.ValidationError):
+        with self.assertRaises(ValueError):
             t.validate('crappy')
 
     def test_serialize(self):
@@ -148,7 +147,7 @@ class TestDuration(unittest.TestCase):
 
         t.validate(datetime.timedelta(seconds=12))
         t.validate(12)
-        with self.assertRaises(exceptions.ValidationError):
+        with self.assertRaises(ValueError):
             t.validate('crappy')
 
     def test_serialize(self):

@@ -42,7 +42,14 @@ class Array(base.Base):
 
 
 class Object(base.Base):
+    """This is the main class of objects"""
     _type = "object"
+
+    def make_schema(self):
+        schema = super(Object, self).make_schema()
+        if 'description' not in schema and self.__doc__:
+            schema['description'] = self.__doc__
+        return schema
 
 
 class Date(String):
@@ -121,7 +128,7 @@ class Duration(String):
                 datetime.timedelta(seconds=value)
             )
         if isinstance(value, six.string_types):
-            self.to_pyton(value)
+            self.to_python(value)
             return value
 
 

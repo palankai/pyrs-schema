@@ -23,6 +23,22 @@ class TestSchemaValidation(unittest.TestCase):
             }
         )
 
+    def test_description_as_docstring(self):
+        class MyObject(types.Object):
+            """Description"""
+            num = types.Integer()
+
+        t = MyObject()
+
+        self.assertEqual(
+            t.get_schema(),
+            {
+                'type': 'object',
+                'description': "Description",
+                'properties': {'num': {'type': 'integer'}}
+            }
+        )
+
     def test_declarative_schema_required(self):
         class MyObject(types.Object):
             num = types.Integer(required=True)
@@ -71,8 +87,8 @@ class TestSchemaValidation(unittest.TestCase):
                 }
             }
         )
-        t.validate({"String": "hello", "sub": {"int": 12}})
-        t.validate({"String": "hello", "sub": None})
+        t.validate({"string": "hello", "sub": {"int": 12}})
+        t.validate({"string": "hello", "sub": None})
 
     def test_definitions(self):
         class MySubObject(types.Object):

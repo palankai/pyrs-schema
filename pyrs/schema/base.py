@@ -15,8 +15,8 @@ class Schema(object):
     _schema = None
 
     def __init__(self):
-        self._creation_index = Base._creation_index
-        Base._creation_index += 1
+        self._creation_index = Schema._creation_index
+        Schema._creation_index += 1
 
     def get_schema(self):
         return self._schema
@@ -24,19 +24,26 @@ class Schema(object):
     def load(self, value):
         if isinstance(value, six.string_types):
             obj = json.loads(value)
-            self.validate(obj)
-            return self.to_python(obj)
+            self.validate_json(obj)
+            self._value = self.to_python(obj)
+            return self._value
         raise ValueError('Unrecognised input format')
+
+    def get(self, name, default=None):
+        return default
 
     def dump(self, obj):
         obj = self.to_json(obj)
-        self.validate(obj)
+        self.validate_json(obj)
         return json.dumps(obj, default=_json_default_serialize)
 
     def make_validator(self):
         return _make_validator(self.get_schema())
 
     def validate(self, obj):
+        self.validate_json(self.to_json(obj))
+
+    def validate_json(self, obj):
         self.get_validator().validate(obj)
 
     def get_validator(self):
@@ -180,8 +187,9 @@ class Base(Schema):
                 by_name[prop.get('name', field)] = prop
             for field in list(set(value) & set(by_name)):
                 value[field] = by_name[field].to_object(value[field])
-            self.validate(value)
-            return self.to_python(value)
+            self.validate_json(value)
+            self._value = self.to_python(value)
+            return self._value
         return super(Base, self).load(value)
 
     def to_python(self, value):
@@ -198,6 +206,8 @@ class Base(Schema):
 
     def to_json(self, value):
         """Convert the value to a JSON compatible value"""
+        if value is None:
+            return None
         if self._fields is not None:
             res = {}
             for field in list(set(value) & set(self._fields)):
