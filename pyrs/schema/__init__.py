@@ -1,2 +1,2 @@
-from .schema import Schema  # NOQA
+from .base import Schema    # NOQA
 from .types import *        # NOQA

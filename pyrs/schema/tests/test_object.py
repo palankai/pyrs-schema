@@ -1,13 +1,12 @@
 import unittest
 
-from .. import schema
 from .. import types
 
 
 class TestSchemaValidation(unittest.TestCase):
 
     def test_declarative_schema(self):
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             num = types.Integer()
             string = types.String(name="String")
 
@@ -25,7 +24,7 @@ class TestSchemaValidation(unittest.TestCase):
         )
 
     def test_declarative_schema_required(self):
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             num = types.Integer(required=True)
             string = types.String(name="String", required=True)
 
@@ -44,17 +43,17 @@ class TestSchemaValidation(unittest.TestCase):
         )
 
     def test_declarative_schema_validation(self):
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             string = types.String(name="String")
 
         t = MyObject()
         t.validate({"String": "value"})
 
     def test_subschema(self):
-        class MySubObject(schema.Schema):
+        class MySubObject(types.Object):
             integer = types.Integer(name="int")
 
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             string = types.String(name="String")
             sub = MySubObject(null=True)
         t = MyObject()
@@ -76,10 +75,10 @@ class TestSchemaValidation(unittest.TestCase):
         t.validate({"String": "hello", "sub": None})
 
     def test_definitions(self):
-        class MySubObject(schema.Schema):
+        class MySubObject(types.Object):
             integer = types.Integer(name="int")
 
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             string = types.String(name="String")
             sub = types.Ref(ref="sub")
 
@@ -107,13 +106,13 @@ class TestSchemaValidation(unittest.TestCase):
         t.validate({"String": "hello", "sub": None})
 
     def test_deep_definitions(self):
-        class MySubObject(schema.Schema):
+        class MySubObject(types.Object):
             integer = types.Ref(ref="integer")
 
             class Definitions:
                 integer = types.Integer()
 
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             string = types.String(name="String")
             sub = types.Ref(ref="sub")
 
@@ -147,7 +146,7 @@ class TestSchemaValidation(unittest.TestCase):
 class TestSchemaToPython(unittest.TestCase):
 
     def test_schema_to_python(self):
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             num = types.Integer()
             string = types.String(name="NewName")
 
@@ -164,7 +163,7 @@ class TestSchemaToPython(unittest.TestCase):
                 else:
                     return False
 
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             username = types.String()
             can_login = Spec()
 
@@ -176,7 +175,7 @@ class TestSchemaToPython(unittest.TestCase):
 class TestSchemaToJson(unittest.TestCase):
 
     def test_schema_to_json(self):
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             num = types.Integer()
             string = types.String(name="NewName")
 
@@ -190,7 +189,7 @@ class TestSchemaToJson(unittest.TestCase):
             def to_json(self, src):
                 return "*******"
 
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             string = types.String()
             password = Spec()
 
@@ -202,10 +201,10 @@ class TestSchemaToJson(unittest.TestCase):
 class TestSchemaLoadForm(unittest.TestCase):
 
     def test_load_form(self):
-        class MySub(schema.Schema):
+        class MySub(types.Object):
             sub = types.Integer()
 
-        class MyObject(schema.Schema):
+        class MyObject(types.Object):
             num = types.Integer()
             string = types.String(name="NewName")
             arr = types.Array()
@@ -219,7 +218,7 @@ class TestSchemaLoadForm(unittest.TestCase):
             'arr': '[1, 2, "hi"]',
             'unknown': '{"any": "value"}'
         }
-        r = t.load_form(form)
+        r = t.load(form)
         self.assertEqual(r, {
             "num": 1,
             "string": "hi",

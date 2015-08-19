@@ -19,18 +19,18 @@ Example usage
 
    from pyrs import schema
 
-   class UserSchema(schema.Schema):
+   class UserSchema(schema.Object):
        username = schema.String(required=True, minlen=3)
        password = schema.String(required=True, minlen=6)
        email = schema.Email()
        date_of_birth = schema.Date(name='dateOfBirth')
 
        class Attrs:
-           additional=True
+           title = "User schema"
 
    user_schema = UserSchema()
    user = user_schema.load(<jsonstring>)
-   user_str = user_schema.dumps(user)
+   user_str = user_schema.dump(user)
 
 
 Modules
@@ -39,9 +39,8 @@ Modules
 .. toctree::
    :maxdepth: 2
 
-   base
-   types
    schema
+   types
    formats
    exceptions
 

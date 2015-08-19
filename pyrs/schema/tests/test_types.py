@@ -3,7 +3,6 @@ import unittest
 
 import jsonschema
 
-from .. import schema
 from .. import types
 from .. import exceptions
 
@@ -135,8 +134,43 @@ class TestDate(unittest.TestCase):
         self.assertEqual(v, datetime.date(2012, 12, 24))
 
     def test_complex(self):
-        class MySchema(schema.Schema):
+        class MySchema(types.Object):
             date = types.Date()
         t = MySchema()
         t.validate({"date": datetime.date(2012, 12, 24)})
         t.dump({"date": datetime.date(2012, 12, 24)})
+
+
+class TestDuration(unittest.TestCase):
+
+    def test_validation(self):
+        t = types.Duration()
+
+        t.validate(datetime.timedelta(seconds=12))
+        t.validate(12)
+        with self.assertRaises(exceptions.ValidationError):
+            t.validate('crappy')
+
+    def test_serialize(self):
+        t = types.Duration()
+        v = t.dump(datetime.timedelta(seconds=12))
+        self.assertEqual(v, '"PT12S"')
+
+    def test_loads(self):
+        t = types.Duration()
+
+        v = t.load('"PT12S"')
+        self.assertEqual(v, datetime.timedelta(seconds=12))
+
+        v = t.load('12')
+        self.assertEqual(v, datetime.timedelta(seconds=12))
+
+        v = t.load('12.1')
+        self.assertEqual(v, datetime.timedelta(seconds=12, milliseconds=100))
+
+    def test_complex(self):
+        class MySchema(types.Object):
+            duration = types.Duration()
+        t = MySchema()
+        t.validate({"duration": datetime.timedelta(seconds=12)})
+        t.dump({"duration": datetime.timedelta(seconds=12)})

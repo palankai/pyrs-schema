@@ -41,6 +41,10 @@ class Array(base.Base):
     _type = "array"
 
 
+class Object(base.Base):
+    _type = "object"
+
+
 class Date(String):
     _attrs = {"format": "date"}
 
@@ -105,7 +109,7 @@ class Duration(String):
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         try:
-            return formats.parse_duration(value)
+            return isodate.parse_duration(value)
         except isodate.ISO8601Error:
             raise ValueError("Invalid duration '%s'" % value)
 
