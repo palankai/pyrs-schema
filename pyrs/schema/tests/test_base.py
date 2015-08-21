@@ -137,6 +137,29 @@ class TestSchema(unittest.TestCase):
         with self.assertRaises(exceptions.ValidationError):
             s.validate({'num': 12.1})
 
+    def test_validation_inline(self):
+        s = base.Schema({
+            'type': 'object',
+            'properties': {
+                'num': {'type': 'integer'}
+            }
+        })
+        s.validate({'num': 12})
+        with self.assertRaises(exceptions.ValidationError):
+            s.validate({'num': 12.1})
+
+    def test_redeclaration_raise_error(self):
+        class MySchema(base.Schema):
+            _schema = {'type': 'string'}
+
+        with self.assertRaises(AttributeError):
+            MySchema({
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            })
+
     def test_load(self):
         class MySchema(base.Schema):
             _schema = {

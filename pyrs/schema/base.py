@@ -14,9 +14,13 @@ class Schema(object):
     _creation_index = 0
     _schema = None
 
-    def __init__(self):
+    def __init__(self, schema=None):
         self._creation_index = Schema._creation_index
         Schema._creation_index += 1
+        if schema and self._schema:
+            raise AttributeError("The declared schema shouldn't be redefined")
+        if schema:
+            self._schema = schema
 
     def get_schema(self):
         return self._schema
