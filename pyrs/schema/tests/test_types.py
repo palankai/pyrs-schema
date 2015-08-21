@@ -254,7 +254,7 @@ class TestObject(unittest.TestCase):
             password = types.String()
 
         data = {'username': 'admin', 'password': 'secret', 'pk': 1}
-        dumped = MySchema().dump(data)
+        dumped = MySchema(additional=None).dump(data)
         self.assertEqual(
             json.loads(dumped),
             {'username': 'admin', 'password': 'secret', 'pk': 1}

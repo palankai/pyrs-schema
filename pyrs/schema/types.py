@@ -93,6 +93,7 @@ class Object(base.Base):
         additional:
             boolean value: enable or disable extra items on the object
             schema: items which are valid against the schema allowed to extend
+            **false by default**
         min_properties:
             An object instance is valid against `min_properties` if its number
             of properties is greater than, or equal to, the value.
@@ -124,6 +125,7 @@ class Object(base.Base):
                     }
     """
     _type = "object"
+    _attrs = {'additional': False}
 
     def __init__(self, extend=None, **attrs):
         super(Object, self).__init__(**attrs)

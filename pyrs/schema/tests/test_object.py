@@ -12,7 +12,7 @@ class TestSchemaValidation(unittest.TestCase):
             num = types.Integer()
             string = types.String(name="String")
 
-        t = MyObject()
+        t = MyObject(additional=None)
 
         self.assertEqual(
             t.get_schema(),
@@ -30,7 +30,7 @@ class TestSchemaValidation(unittest.TestCase):
             """Description"""
             num = types.Integer()
 
-        t = MyObject()
+        t = MyObject(additional=None)
 
         self.assertEqual(
             t.get_schema(),
@@ -46,7 +46,7 @@ class TestSchemaValidation(unittest.TestCase):
             num = types.Integer(required=True)
             string = types.String(name="String", required=True)
 
-        t = MyObject()
+        t = MyObject(additional=None)
         s = t.get_schema()
         expected = {
             "type": "object",
@@ -73,8 +73,8 @@ class TestSchemaValidation(unittest.TestCase):
 
         class MyObject(types.Object):
             string = types.String(name="String")
-            sub = MySubObject(null=True)
-        t = MyObject()
+            sub = MySubObject(null=True, additional=None)
+        t = MyObject(additional=None)
 
         self.assertEqual(
             t.get_schema(),
@@ -101,8 +101,8 @@ class TestSchemaValidation(unittest.TestCase):
             sub = types.Ref(ref="sub")
 
             class Definitions:
-                sub = MySubObject(null=True)
-        t = MyObject()
+                sub = MySubObject(null=True, additional=None)
+        t = MyObject(additional=None)
 
         self.assertEqual(
             t.get_schema(),
@@ -135,8 +135,8 @@ class TestSchemaValidation(unittest.TestCase):
             sub = types.Ref(ref="sub")
 
             class Definitions:
-                sub = MySubObject(null=True)
-        t = MyObject()
+                sub = MySubObject(null=True, additional=None)
+        t = MyObject(additional=None)
 
         self.assertEqual(
             t.get_schema(),
@@ -318,9 +318,9 @@ class TestSchemaLoadForm(unittest.TestCase):
             num = types.Integer()
             string = types.String(name="NewName")
             arr = types.Array()
-            sub = MySub()
+            sub = MySub(additional=None)
 
-        t = MyObject()
+        t = MyObject(additional=None)
         form = {
             'num': '1',
             'NewName': 'hi',
@@ -451,7 +451,7 @@ class TestSchemaTagFilter(unittest.TestCase):
         class MyObject(types.Object):
             fullname = types.String()
             email = types.String(required=True, tags=['sensitive'])
-            login = SubSchema()
+            login = SubSchema(additional=None)
 
             class Attrs:
                 additional = False
@@ -484,7 +484,7 @@ class TestSchemaTagFilter(unittest.TestCase):
         class MyObject(types.Object):
             fullname = types.String()
             email = types.String(required=True, tags=['sensitive'])
-            login = SubSchema()
+            login = SubSchema(additional=None)
 
             class Attrs:
                 additional = False
@@ -517,7 +517,7 @@ class TestSchemaTagFilter(unittest.TestCase):
         class MyObject(types.Object):
             fullname = types.String()
             email = types.String(required=True, tags=['sensitive'])
-            login = SubSchema()
+            login = SubSchema(additional=None)
 
             class Attrs:
                 additional = False

@@ -115,7 +115,7 @@ class TestDefault(unittest.TestCase):
         class MySchema(types.Object):
             name = types.String(default='example')
 
-        t = MySchema()
+        t = MySchema(additional=None)
         self.assertEqual(
             t.get_schema(),
             {
