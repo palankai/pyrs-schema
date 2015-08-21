@@ -109,6 +109,24 @@ class TestDeclarativeBase(unittest.TestCase):
         self.assertEqual(t.get_schema(), {"type": ["string", "null"]})
 
 
+class TestDefault(unittest.TestCase):
+
+    def test_default_schema(self):
+        class MySchema(types.Object):
+            name = types.String(default='example')
+
+        t = MySchema()
+        self.assertEqual(
+            t.get_schema(),
+            {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string', 'default': 'example'}
+                }
+            }
+        )
+
+
 class TestSchema(unittest.TestCase):
 
     def test_creation_index(self):

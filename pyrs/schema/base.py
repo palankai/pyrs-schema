@@ -192,6 +192,8 @@ class Base(Schema):
             schema["title"] = self["title"]
         if self.get("description"):
             schema["description"] = self["description"]
+        if self.get("default"):
+            schema["default"] = self["default"]
         if self._definitions:
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
