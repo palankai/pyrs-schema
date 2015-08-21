@@ -1,5 +1,6 @@
 import collections
 import datetime
+import functools
 import json
 
 import isodate
@@ -13,56 +14,115 @@ from . import formats
 class Schema(object):
     _creation_index = 0
     _schema = None
+    _attrs = None
 
-    def __init__(self):
+    def __init__(self, _schema=None, **attrs):
         self._creation_index = Schema._creation_index
         Schema._creation_index += 1
+        if _schema and self._schema:
+            raise AttributeError("The declared schema shouldn't be redefined")
+        if _schema:
+            self._schema = _schema
+        if self.__class__._attrs is not None:
+            self._attrs = self.__class__._attrs.copy()
+        else:
+            self._attrs = collections.OrderedDict()
+        self._attrs.update(attrs)
 
-    def get_schema(self):
+    def __getitem__(self, name):
+        return self._attrs[name]
+
+    def __setitem__(self, name, value):
+        self._attrs[name] = value
+        self.invalidate()
+
+    def keys(self):
+        return self._attrs.keys()
+
+    def get(self, name, default=None):
+        return self._attrs.get(name, default)
+
+    def get_schema(self, context=None):
         return self._schema
 
-    def load(self, value):
+    def get_tags(self):
+        return self.get('tags', [])
+
+    def has_tags(self, tags):
+        if not isinstance(tags, (list, tuple, set)):
+            tags = {tags}
+        if set(self.get_tags()) & set(tags):
+            return True
+        return False
+
+    def load(self, value, context=None):
         if isinstance(value, six.string_types):
             obj = json.loads(value)
-            self.validate_json(obj)
-            self._value = self.to_python(obj)
+            self.validate_json(obj, context=context)
+            self._value = self.to_python(obj, context=context)
             return self._value
         raise ValueError('Unrecognised input format')
 
-    def get(self, name, default=None):
-        return default
+    def dump(self, obj, context=None):
+        obj = self.to_json(obj, context=context)
+        self.validate_json(obj, context=context)
+        return self._dump(obj, context=context)
 
-    def dump(self, obj):
-        obj = self.to_json(obj)
-        self.validate_json(obj)
-        return json.dumps(obj, default=_json_default_serialize)
+    def _dump(self, obj, context=None):
+        default = functools.partial(self._dump_default, context=context)
+        return json.dumps(obj, default=default)
 
-    def make_validator(self):
-        return _make_validator(self.get_schema())
+    def _dump_default(self, obj, context=None):
+        if isinstance(obj, datetime.datetime):
+            return isodate.datetime_isoformat(obj)
+        elif isinstance(obj, datetime.date):
+            return isodate.date_isoformat(obj)
+        elif isinstance(obj, datetime.time):
+            return isodate.time_isoformat(obj)
+        elif isinstance(obj, datetime.timedelta):
+            return obj.total_seconds()
+        else:
+            raise TypeError(obj)
 
-    def validate(self, obj):
-        self.validate_json(self.to_json(obj))
+    def make_validator(self, context=None):
+        return _make_validator(self.get_schema(context=context))
 
-    def validate_json(self, obj):
-        self.get_validator().validate(obj)
+    def validate(self, obj, context=None):
+        self.validate_json(self.to_json(obj, context=context))
 
-    def get_validator(self):
-        if hasattr(self, "_validator"):
+    def validate_json(self, obj, context=None):
+        self.get_validator(context=context).validate(obj)
+
+    def get_validator(self, context=None):
+        if context:
+            return self.make_validator(context=context)
+        if getattr(self, "_validator", None):
             return self._validator
-        self._validator = self.make_validator()
+        self._validator = self.make_validator(context=context)
         return self._validator
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         """Convert the value to a JSON compatible value"""
         return value
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         """Convert the value to a real python object"""
         return value
 
-    def to_object(self, value):
+    def to_object(self, value, context=None):
         """Convert the value to python object, make validation possible"""
         return json.loads(value)
+
+    def __eq__(self, other):
+        if isinstance(other, dict):
+            return self.get_schema() == other
+        if isinstance(other, Schema):
+            return self.get_schema() == other.get_schema()
+        return id(self) == id(other)
+
+    def invalidate(self, context=None):
+        if hasattr(self, "_validator"):
+            self._validator = None
 
 
 class DeclarativeMetaclass(type):
@@ -125,32 +185,26 @@ class Base(Schema):
     _properties = None
 
     def __init__(self, **attrs):
-        super(Base, self).__init__()
-        if self.__class__._attrs is not None:
-            self._attrs = self.__class__._attrs.copy()
-        else:
-            self._attrs = collections.OrderedDict()
-        self._attrs.update(attrs)
+        super(Base, self).__init__(**attrs)
 
-    def __getitem__(self, name):
-        return self._attrs[name]
-
-    def __setitem__(self, name, value):
-        self._attrs[name] = value
-
-    def keys(self):
-        return self._attrs.keys()
-
-    def get(self, name, default=None):
-        return self._attrs.get(name, default)
-
-    def get_schema(self):
+    def get_schema(self, context=None):
+        if context:
+            self.make_schema(context=context)
         if getattr(self, "_schema", None):
             return self._schema
-        self._schema = self.make_schema()
+        self._schema = self.make_schema(context=context)
         return self._schema
 
-    def make_schema(self):
+    def make_schema(self, context=None):
+        if context is None:
+            context = {}
+        attr_exclude_tags = lib.ensure_set(self.get('exclude_tags'))
+        ctx_exclude_tags = lib.ensure_set(context.get('exclude_tags'))
+        exclude_tags = attr_exclude_tags | ctx_exclude_tags
+        if attr_exclude_tags:
+            context = context.copy()
+            context['exclude_tags'] = exclude_tags
+
         schema = {"type": self._type}
         if self.get("null"):
             schema["type"] = [self._type, "null"]
@@ -162,17 +216,27 @@ class Base(Schema):
             schema["title"] = self["title"]
         if self.get("description"):
             schema["description"] = self["description"]
+        if self.get("default"):
+            schema["default"] = self["default"]
         if self._definitions:
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
-                definitions[prop.get("name", name)] = prop.get_schema()
+                definitions[prop.get("name", name)] = \
+                    prop.get_schema(context=context)
             schema["definitions"] = definitions
         if self._fields is not None:
             required = []
             properties = collections.OrderedDict()
             for key, prop in self._fields.items():
+                if key in self.get('exclude', []):
+                    continue
+                if self.get('include'):
+                    if key not in lib.ensure_list(self.get('include')):
+                        continue
+                if exclude_tags and prop.has_tags(exclude_tags):
+                    continue
                 name = prop.get("name", key)
-                properties[name] = prop.get_schema()
+                properties[name] = prop.get_schema(context=context)
                 if prop.get('required'):
                     required.append(name)
             schema["properties"] = properties
@@ -180,49 +244,56 @@ class Base(Schema):
                 schema['required'] = sorted(required)
         return schema
 
-    def load(self, value):
+    def get_name(self, default=None):
+        return self.get('name', default)
+
+    def load(self, value, context=None):
         if isinstance(value, dict):
             by_name = {}
             for field, prop in self._fields.items():
                 by_name[prop.get('name', field)] = prop
             for field in list(set(value) & set(by_name)):
-                value[field] = by_name[field].to_object(value[field])
-            self.validate_json(value)
-            self._value = self.to_python(value)
+                value[field] = by_name[field].to_object(
+                    value[field], context=context
+                )
+            self.validate_json(value, context=context)
+            self._value = self.to_python(value, context=context)
             return self._value
-        return super(Base, self).load(value)
+        return super(Base, self).load(value, context=context)
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         """Convert the value to a real python object"""
         if self._fields is not None:
             res = {}
             for field, schema in self._fields.items():
                 name = schema.get('name', field)
                 if name in value:
-                    res[field] = schema.to_python(value.pop(name))
+                    res[field] = schema.to_python(
+                        value.pop(name), context=context
+                    )
             res.update(value)
             return res
         return value
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         """Convert the value to a JSON compatible value"""
         if value is None:
             return None
         if self._fields is not None:
             res = {}
+            value = value.copy()
             for field in list(set(value) & set(self._fields)):
                 schema = self._fields.get(field)
                 res[schema.get('name', field)] = \
-                    schema.to_json(value.pop(field))
+                    schema.to_json(value.pop(field), context=context)
             res.update(value)
             return res
         return value
 
-    def invalidate(self):
+    def invalidate(self, context=None):
+        super(Base, self).invalidate(context=None)
         if hasattr(self, "_schema"):
-            del self._schema
-        if hasattr(self, "_validator"):
-            del self._validator
+            self._schema = None
 
 
 def _types_msg(instance, types, hint=''):
@@ -238,7 +309,6 @@ def _types_msg(instance, types, hint=''):
 def _validate_type_draft4(validator, types, instance, schema):
     if isinstance(types, six.string_types):
         types = [types]
-
     if (
             'string' in types and
             'string' in schema.get('type') and
@@ -289,16 +359,3 @@ def _make_validator(schema):
     )
     validator_cls.check_schema(schema)
     return validator_cls(schema, format_checker=format_checker)
-
-
-def _json_default_serialize(obj):
-    if isinstance(obj, datetime.datetime):
-        return isodate.datetime_isoformat(obj)
-    elif isinstance(obj, datetime.date):
-        return isodate.date_isoformat(obj)
-    elif isinstance(obj, datetime.time):
-        return isodate.time_isoformat(obj)
-    elif isinstance(obj, datetime.timedelta):
-        return obj.total_seconds()
-    else:
-        raise TypeError(obj)

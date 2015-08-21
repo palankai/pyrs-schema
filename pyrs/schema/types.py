@@ -1,7 +1,7 @@
 """
 This module introduce the basic schema types.
 """
-
+import collections
 import datetime
 import json
 
@@ -15,13 +15,13 @@ from . import formats
 class String(base.Base):
     _type = "string"
 
-    def make_schema(self):
-        schema = super(String, self).make_schema()
+    def make_schema(self, context=None):
+        schema = super(String, self).make_schema(context=context)
         if self.get("pattern"):
             schema["pattern"] = self["pattern"]
         return schema
 
-    def to_object(self, value):
+    def to_object(self, value, context=None):
         return value
 
 
@@ -38,24 +38,138 @@ class Boolean(base.Base):
 
 
 class Array(base.Base):
+    """
+    Successful validation of an array instance with regards to these two
+    keywords is determined as follows:
+
+    if "items" is not present, or its value is an object, validation of
+    the instance always succeeds, regardless of the value of "additional"
+
+    if the value of "additional" is boolean value true or an object,
+    validation of the instance always succeeds;
+
+    if the value of "additional" is boolean value false and the value of
+    "items" is an array, the instance is valid if its size is less than,
+    or equal to, the size of "items".
+
+    Array specific options:
+        min_items:
+            An array instance is valid against "min_items" if its size is
+            greater than, or equal to, the value of this keyword.
+        max_items:
+            An array instance is valid against "max_items" if its size is
+            less than, or equal to, the value of this keyword.
+        unique_items:
+            If this keyword has boolean value false, the instance validates
+            successfully. If it has boolean value true, the instance validates
+            successfully if all of its elements are unique.
+    """
     _type = "array"
+
+    def make_schema(self, context=None):
+        schema = super(Array, self).make_schema(context=context)
+        if self.get('additional') is not None:
+            schema['additionalItems'] = self.get('additional')
+        if self.get('max_items') is not None:
+            schema['maxItems'] = self.get('max_items')
+        if self.get('min_items') is not None:
+            schema['minItems'] = self.get('min_items')
+        if self.get('unique_items') is not None:
+            schema['uniqueItems'] = self.get('unique_items')
+        if self.get('items'):
+            if isinstance(self.get('items'), (list, tuple)):
+                schema['items'] = [
+                    s.get_schema(context=context) for s in self.get('items')
+                ]
+            else:
+                schema['items'] = self.get('items').get_schema(context=context)
+        return schema
 
 
 class Object(base.Base):
-    """This is the main class of objects"""
-    _type = "object"
+    """Declarative schema object
 
-    def make_schema(self):
-        schema = super(Object, self).make_schema()
+    Object specific attributes:
+        additional:
+            boolean value: enable or disable extra items on the object
+            schema: items which are valid against the schema allowed to extend
+            **false by default**
+        min_properties:
+            An object instance is valid against `min_properties` if its number
+            of properties is greater than, or equal to, the value.
+        max_properties:
+            An object instance is valid against `max_properties` if its number
+            of properties is less than, or equal to, the value.
+        pattern:
+            Should be a dict where the keys are valid regular excpressions
+            and the values are schema instances. The object instance is valid
+            if the extra properties (which are not listed as property) valid
+            against the schema while name is match on the pattern.
+
+        Be careful, the pattern sould be explicit as possible, if the pattern
+        match on any normal property the validation should be successful
+        against them as well.
+
+        A normal object should looks like the following:
+
+        .. code:: python
+
+            class Translation(types.Object):
+                keyword = types.String()
+                value = types.String()
+
+                class Attrs:
+                    additional = False
+                    patterns = {
+                        'value_[a-z]{2}': types.String()
+                    }
+    """
+    _type = "object"
+    _attrs = {'additional': False}
+
+    def __init__(self, extend=None, **attrs):
+        super(Object, self).__init__(**attrs)
+        if extend:
+            self._fields.update(extend)
+
+    def make_schema(self, context=None):
+        schema = super(Object, self).make_schema(context=context)
         if 'description' not in schema and self.__doc__:
             schema['description'] = self.__doc__
+        if self.get('additional') is not None:
+            if isinstance(self.get('additional'), bool):
+                schema['additionalProperties'] = self.get('additional')
+            else:
+                schema['additionalProperties'] = \
+                    self.get('additional').get_schema(context=context)
+        if self.get('min_properties') is not None:
+            schema['minProperties'] = self.get('min_properties')
+        if self.get('max_properties') is not None:
+            schema['maxProperties'] = self.get('max_properties')
+        if self.get('patterns'):
+            patterns = collections.OrderedDict()
+            for reg, pattern in self.get('patterns').items():
+                patterns[reg] = pattern.get_schema(context=context)
+            schema['patternProperties'] = patterns
         return schema
+
+    @property
+    def properties(self):
+        return self._fields
+
+    def extend(self, properties, context=None):
+        """Extending the exist same with new properties.
+        If you want to extending with an other schema, you should
+        use the other schame `properties`
+        """
+        self._fields.update(properties)
+        self.invalidate(context=None)
 
 
 class Date(String):
     _attrs = {"format": "date"}
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, datetime.date):
             return value
         try:
@@ -63,7 +177,7 @@ class Date(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid date '%s'" % value)
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.date):
             return isodate.date_isoformat(value)
         if isinstance(value, six.string_types):
@@ -74,7 +188,7 @@ class Date(String):
 class Time(String):
     _attrs = {"format": "time"}
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, datetime.time):
             return value
         try:
@@ -82,7 +196,7 @@ class Time(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid time '%s'" % value)
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.time_isoformat(value)
         if isinstance(value, six.string_types):
@@ -93,7 +207,7 @@ class Time(String):
 class DateTime(String):
     _attrs = {"format": "datetime"}
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, datetime.datetime):
             return value
         try:
@@ -101,7 +215,7 @@ class DateTime(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid datetime '%s'" % value)
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.datetime_isoformat(value)
         if isinstance(value, six.string_types):
@@ -112,7 +226,7 @@ class DateTime(String):
 class Duration(String):
     _attrs = {"format": "duration"}
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         try:
@@ -120,7 +234,7 @@ class Duration(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid duration '%s'" % value)
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return isodate.duration_isoformat(value)
         if isinstance(value, (int, float)):
@@ -134,7 +248,7 @@ class Duration(String):
 
 class TimeDelta(Number):
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, six.string_types):
             value = json.loads(value)
         if isinstance(value, (int, float)):
@@ -143,7 +257,7 @@ class TimeDelta(Number):
             return value
         raise ValueError("Invalid type of timedelta '%s'" % type(value))
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return value.total_seconds()
         if isinstance(value, (int, float)):
@@ -158,13 +272,13 @@ class Enum(base.Base):
     :type enum: list
     """
 
-    def make_schema(self):
+    def make_schema(self, context=None):
         """Ensure the generic schema, remove `types`
 
         :return: Gives back the schema
         :rtype: dict
         """
-        schema = super(Enum, self).make_schema()
+        schema = super(Enum, self).make_schema(context=None)
         schema.pop("type")
         if self.get("enum"):
             schema["enum"] = self["enum"]
@@ -173,8 +287,8 @@ class Enum(base.Base):
 
 class Ref(base.Base):
 
-    def make_schema(self):
-        schema = super(Ref, self).make_schema()
+    def make_schema(self, context=None):
+        schema = super(Ref, self).make_schema(context=context)
         schema.pop("type")
         assert not schema
         return {"$ref": "#/definitions/"+self["ref"]}

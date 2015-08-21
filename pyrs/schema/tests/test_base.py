@@ -22,7 +22,7 @@ class TestBase(unittest.TestCase):
             res = b.load('"Hello"')
 
         self.assertEqual(res, "Hello")
-        validate.assert_called_with("Hello")
+        validate.assert_called_with("Hello", context=None)
 
     def test_dump(self):
         b = base.Base()
@@ -30,7 +30,7 @@ class TestBase(unittest.TestCase):
             res = b.dump("Hello")
 
         self.assertEqual(res, '"Hello"')
-        validate.assert_called_with("Hello")
+        validate.assert_called_with("Hello", context=None)
 
     def test_get_schema(self):
         with mock.patch.object(base.Base, "_type", new="string"):
@@ -109,6 +109,24 @@ class TestDeclarativeBase(unittest.TestCase):
         self.assertEqual(t.get_schema(), {"type": ["string", "null"]})
 
 
+class TestDefault(unittest.TestCase):
+
+    def test_default_schema(self):
+        class MySchema(types.Object):
+            name = types.String(default='example')
+
+        t = MySchema(additional=None)
+        self.assertEqual(
+            t.get_schema(),
+            {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string', 'default': 'example'}
+                }
+            }
+        )
+
+
 class TestSchema(unittest.TestCase):
 
     def test_creation_index(self):
@@ -136,6 +154,29 @@ class TestSchema(unittest.TestCase):
         s.validate({'num': 12})
         with self.assertRaises(exceptions.ValidationError):
             s.validate({'num': 12.1})
+
+    def test_validation_inline(self):
+        s = base.Schema({
+            'type': 'object',
+            'properties': {
+                'num': {'type': 'integer'}
+            }
+        })
+        s.validate({'num': 12})
+        with self.assertRaises(exceptions.ValidationError):
+            s.validate({'num': 12.1})
+
+    def test_redeclaration_raise_error(self):
+        class MySchema(base.Schema):
+            _schema = {'type': 'string'}
+
+        with self.assertRaises(AttributeError):
+            MySchema({
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            })
 
     def test_load(self):
         class MySchema(base.Schema):
