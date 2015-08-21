@@ -393,6 +393,30 @@ class TestSchemaExtend(unittest.TestCase):
         t.validate({'num': 12, 'title': 'test'})
 
 
+class TestSchemaInclude(unittest.TestCase):
+
+    def test_partial(self):
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String()
+
+            class Attrs:
+                additional = False
+
+        t = MyObject(include=['num'])
+        self.assertEqual(
+            t.get_schema(),
+            {
+                "type": "object",
+                "properties": {
+                    "num": {"type": "integer"},
+                },
+                'additionalProperties': False,
+            }
+        )
+        t.validate({'num': 12})
+
+
 class TestSchemaExclude(unittest.TestCase):
 
     def test_initial_exclude(self):

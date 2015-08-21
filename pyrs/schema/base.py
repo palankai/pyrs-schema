@@ -230,6 +230,9 @@ class Base(Schema):
             for key, prop in self._fields.items():
                 if key in self.get('exclude', []):
                     continue
+                if self.get('include'):
+                    if key not in lib.ensure_list(self.get('include')):
+                        continue
                 if exclude_tags and prop.has_tags(exclude_tags):
                     continue
                 name = prop.get("name", key)
