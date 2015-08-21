@@ -35,7 +35,22 @@ class Schema(object):
     def dump(self, obj):
         obj = self.to_json(obj)
         self.validate_json(obj)
-        return json.dumps(obj, default=_json_default_serialize)
+        return self._dump(obj)
+
+    def _dump(self, obj):
+        return json.dumps(obj, default=self._dump_default)
+
+    def _dump_default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return isodate.datetime_isoformat(obj)
+        elif isinstance(obj, datetime.date):
+            return isodate.date_isoformat(obj)
+        elif isinstance(obj, datetime.time):
+            return isodate.time_isoformat(obj)
+        elif isinstance(obj, datetime.timedelta):
+            return obj.total_seconds()
+        else:
+            raise TypeError(obj)
 
     def make_validator(self):
         return _make_validator(self.get_schema())
@@ -290,16 +305,3 @@ def _make_validator(schema):
     )
     validator_cls.check_schema(schema)
     return validator_cls(schema, format_checker=format_checker)
-
-
-def _json_default_serialize(obj):
-    if isinstance(obj, datetime.datetime):
-        return isodate.datetime_isoformat(obj)
-    elif isinstance(obj, datetime.date):
-        return isodate.date_isoformat(obj)
-    elif isinstance(obj, datetime.time):
-        return isodate.time_isoformat(obj)
-    elif isinstance(obj, datetime.timedelta):
-        return obj.total_seconds()
-    else:
-        raise TypeError(obj)
