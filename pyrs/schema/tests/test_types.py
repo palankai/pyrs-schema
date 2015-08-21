@@ -1,4 +1,5 @@
 import datetime
+import json
 import unittest
 
 import jsonschema
@@ -173,3 +174,22 @@ class TestDuration(unittest.TestCase):
         t = MySchema()
         t.validate({"duration": datetime.timedelta(seconds=12)})
         t.dump({"duration": datetime.timedelta(seconds=12)})
+
+
+class TestObject(unittest.TestCase):
+
+    def test_serialize(self):
+        class MySchema(types.Object):
+            username = types.String()
+            password = types.String()
+
+        data = {'username': 'admin', 'password': 'secret', 'pk': 1}
+        dumped = MySchema().dump(data)
+        self.assertEqual(
+            json.loads(dumped),
+            {'username': 'admin', 'password': 'secret', 'pk': 1}
+        )
+        self.assertEqual(
+            data,
+            {'username': 'admin', 'password': 'secret', 'pk': 1}
+        )

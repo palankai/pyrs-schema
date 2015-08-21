@@ -210,6 +210,7 @@ class Base(Schema):
             return None
         if self._fields is not None:
             res = {}
+            value = value.copy()
             for field in list(set(value) & set(self._fields)):
                 schema = self._fields.get(field)
                 res[schema.get('name', field)] = \
