@@ -34,6 +34,7 @@ class Schema(object):
 
     def __setitem__(self, name, value):
         self._attrs[name] = value
+        self.invalidate()
 
     def keys(self):
         return self._attrs.keys()
@@ -43,6 +44,16 @@ class Schema(object):
 
     def get_schema(self, context=None):
         return self._schema
+
+    def get_tags(self):
+        return self.get('tags', [])
+
+    def has_tags(self, tags):
+        if not isinstance(tags, (list, tuple, set)):
+            tags = {tags}
+        if set(self.get_tags()) & set(tags):
+            return True
+        return False
 
     def load(self, value, context=None):
         if isinstance(value, six.string_types):
@@ -83,9 +94,9 @@ class Schema(object):
         self.get_validator(context=context).validate(obj)
 
     def get_validator(self, context=None):
-        if context is not None:
+        if context:
             return self.make_validator(context=context)
-        if hasattr(self, "_validator"):
+        if getattr(self, "_validator", None):
             return self._validator
         self._validator = self.make_validator(context=context)
         return self._validator
@@ -108,6 +119,10 @@ class Schema(object):
         if isinstance(other, Schema):
             return self.get_schema() == other.get_schema()
         return id(self) == id(other)
+
+    def invalidate(self, context=None):
+        if hasattr(self, "_validator"):
+            self._validator = None
 
 
 class DeclarativeMetaclass(type):
@@ -173,7 +188,7 @@ class Base(Schema):
         super(Base, self).__init__(**attrs)
 
     def get_schema(self, context=None):
-        if context is not None:
+        if context:
             self.make_schema(context=context)
         if getattr(self, "_schema", None):
             return self._schema
@@ -181,6 +196,15 @@ class Base(Schema):
         return self._schema
 
     def make_schema(self, context=None):
+        if context is None:
+            context = {}
+        attr_exclude_tags = lib.ensure_set(self.get('exclude_tags'))
+        ctx_exclude_tags = lib.ensure_set(context.get('exclude_tags'))
+        exclude_tags = attr_exclude_tags | ctx_exclude_tags
+        if attr_exclude_tags:
+            context = context.copy()
+            context['exclude_tags'] = exclude_tags
+
         schema = {"type": self._type}
         if self.get("null"):
             schema["type"] = [self._type, "null"]
@@ -204,6 +228,10 @@ class Base(Schema):
             required = []
             properties = collections.OrderedDict()
             for key, prop in self._fields.items():
+                if key in self.get('exclude', []):
+                    continue
+                if exclude_tags and prop.has_tags(exclude_tags):
+                    continue
                 name = prop.get("name", key)
                 properties[name] = prop.get_schema(context=context)
                 if prop.get('required'):
@@ -212,6 +240,9 @@ class Base(Schema):
             if required:
                 schema['required'] = sorted(required)
         return schema
+
+    def get_name(self, default=None):
+        return self.get('name', default)
 
     def load(self, value, context=None):
         if isinstance(value, dict):
@@ -257,10 +288,9 @@ class Base(Schema):
         return value
 
     def invalidate(self, context=None):
+        super(Base, self).invalidate(context=None)
         if hasattr(self, "_schema"):
-            del self._schema
-        if hasattr(self, "_validator"):
-            del self._validator
+            self._schema = None
 
 
 def _types_msg(instance, types, hint=''):

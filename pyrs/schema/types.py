@@ -125,6 +125,11 @@ class Object(base.Base):
     """
     _type = "object"
 
+    def __init__(self, extend=None, **attrs):
+        super(Object, self).__init__(**attrs)
+        if extend:
+            self._fields.update(extend)
+
     def make_schema(self, context=None):
         schema = super(Object, self).make_schema(context=context)
         if 'description' not in schema and self.__doc__:
@@ -145,6 +150,18 @@ class Object(base.Base):
                 patterns[reg] = pattern.get_schema(context=context)
             schema['patternProperties'] = patterns
         return schema
+
+    @property
+    def properties(self):
+        return self._fields
+
+    def extend(self, properties, context=None):
+        """Extending the exist same with new properties.
+        If you want to extending with an other schema, you should
+        use the other schame `properties`
+        """
+        self._fields.update(properties)
+        self.invalidate(context=None)
 
 
 class Date(String):

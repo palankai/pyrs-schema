@@ -336,3 +336,184 @@ class TestSchemaLoadForm(unittest.TestCase):
             'arr': [1, 2, 'hi'],
             'unknown': '{"any": "value"}'
         })
+
+
+class TestSchemaExtend(unittest.TestCase):
+
+    def test_procedural_extend(self):
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String()
+
+            class Attrs:
+                additional = False
+
+        t = MyObject()
+        t.get_schema()
+        t.validate({'num': 12})
+        t.extend({
+            'title': types.String()
+        })
+
+        self.assertEqual(
+            t.get_schema(),
+            {
+                "type": "object",
+                "properties": {
+                    "num": {"type": "integer"},
+                    "string": {"type": "string"},
+                    "title": {"type": "string"},
+                },
+                'additionalProperties': False,
+            }
+        )
+        t.validate({'num': 12, 'title': 'test'})
+
+    def test_initial_extend(self):
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String()
+
+            class Attrs:
+                additional = False
+
+        t = MyObject(extend={'title': types.String()})
+        self.assertEqual(
+            t.get_schema(),
+            {
+                "type": "object",
+                "properties": {
+                    "num": {"type": "integer"},
+                    "string": {"type": "string"},
+                    "title": {"type": "string"},
+                },
+                'additionalProperties': False,
+            }
+        )
+        t.validate({'num': 12, 'title': 'test'})
+
+
+class TestSchemaExclude(unittest.TestCase):
+
+    def test_initial_exclude(self):
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String(required=True)
+
+            class Attrs:
+                additional = False
+
+        t = MyObject(exclude=['string'])
+        self.assertEqual(
+            t.get_schema(),
+            {
+                "type": "object",
+                "properties": {
+                    "num": {"type": "integer"},
+                },
+                'additionalProperties': False,
+            }
+        )
+        t.validate({'num': 12})
+
+
+class TestSchemaTagFilter(unittest.TestCase):
+
+    def test_context_exclude(self):
+        class SubSchema(types.Object):
+            name = types.String()
+            password = types.String(tags=['sensitive'])
+
+        class MyObject(types.Object):
+            fullname = types.String()
+            email = types.String(required=True, tags=['sensitive'])
+            login = SubSchema()
+
+            class Attrs:
+                additional = False
+
+        t = MyObject()
+        c = {'exclude_tags': 'sensitive'}
+        self.assertEqual(
+            t.get_schema(context=c),
+            {
+                "type": "object",
+                "properties": {
+                    "fullname": {"type": "string"},
+                    'login': {
+                        'type': 'object',
+                        'properties': {
+                            'name': {'type': 'string'}
+                        }
+                    }
+                },
+                'additionalProperties': False,
+            }
+        )
+        t.validate({'fullname': 'test'})
+
+    def test_context_exclude_initial(self):
+        class SubSchema(types.Object):
+            name = types.String()
+            password = types.String(tags=['sensitive'])
+
+        class MyObject(types.Object):
+            fullname = types.String()
+            email = types.String(required=True, tags=['sensitive'])
+            login = SubSchema()
+
+            class Attrs:
+                additional = False
+
+        t = MyObject(exclude_tags='sensitive')
+        self.assertEqual(
+            t.get_schema(),
+            {
+                "type": "object",
+                "properties": {
+                    "fullname": {"type": "string"},
+                    'login': {
+                        'type': 'object',
+                        'properties': {
+                            'name': {'type': 'string'}
+                        }
+                    }
+                },
+                'additionalProperties': False,
+            }
+        )
+        t.validate({'fullname': 'test'})
+
+    def test_context_exclude_tags_mix(self):
+        class SubSchema(types.Object):
+            name = types.String()
+            password = types.String(tags=['sensitive'])
+            last_update = types.String(tags=['readonly'])
+
+        class MyObject(types.Object):
+            fullname = types.String()
+            email = types.String(required=True, tags=['sensitive'])
+            login = SubSchema()
+
+            class Attrs:
+                additional = False
+
+        t = MyObject(exclude_tags='sensitive')
+        c = {'exclude_tags': 'readonly'}
+        self.assertEqual(
+            t.get_schema(context=c),
+            {
+                "type": "object",
+                "properties": {
+                    "fullname": {"type": "string"},
+                    'login': {
+                        'type': 'object',
+                        'properties': {
+                            'name': {'type': 'string'}
+                        }
+                    }
+                },
+                'additionalProperties': False,
+            }
+        )
+        t.validate({'fullname': 'test'})
