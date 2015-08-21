@@ -1,5 +1,7 @@
 import unittest
 
+import jsonschema
+
 from .. import types
 
 
@@ -63,7 +65,7 @@ class TestSchemaValidation(unittest.TestCase):
             string = types.String(name="String")
 
         t = MyObject()
-        t.validate({"String": "value"})
+        t.validate({"string": "value"})
 
     def test_subschema(self):
         class MySubObject(types.Object):
@@ -212,6 +214,98 @@ class TestSchemaToJson(unittest.TestCase):
         t = MyObject()
         p = t.to_json({'username': 'user', 'password': 'secret'})
         self.assertEqual(p, {'username': 'user', 'password': '*******'})
+
+
+class TestSchemaAdditional(unittest.TestCase):
+
+    def test_schema(self):
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String(name="String")
+
+            class Attrs:
+                additional = False
+
+        t = MyObject()
+
+        self.assertEqual(
+            t.get_schema(),
+            {
+                "type": "object",
+                "properties": {
+                    "num": {"type": "integer"},
+                    "String": {"type": "string"},
+                },
+                "additionalProperties": False
+            }
+        )
+
+    def test_validation(self):
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String(name="String")
+
+            class Attrs:
+                additional = False
+
+        t = MyObject()
+        t.validate({'num': 12})
+        t.validate({'string': 'string'})
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate({'string': 'string', 'extra': 'invalid'})
+
+
+class TestSchemaPattern(unittest.TestCase):
+
+    def test_schema(self):
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String(name="String")
+
+            class Attrs:
+                additional = False
+                min_properties = 2
+                max_properties = 4
+                patterns = {
+                    '[a-z]{2}': types.String()
+                }
+
+        t = MyObject()
+
+        self.assertEqual(
+            t.get_schema(),
+            {
+                "type": "object",
+                "properties": {
+                    "num": {"type": "integer"},
+                    "String": {"type": "string"},
+                },
+                "additionalProperties": False,
+                'minProperties': 2,
+                'maxProperties': 4,
+                'patternProperties': {
+                    '[a-z]{2}': {'type': 'string'}
+                }
+            }
+        )
+
+    def test_validation(self):
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String(name="String")
+
+            class Attrs:
+                additional = False
+                patterns = {
+                    'name_[a-z]{2}': types.String()
+                }
+
+        t = MyObject()
+        t.validate({'num': 12})
+        t.validate({'string': 'string'})
+        t.validate({'string': 'string', 'name_en': 'English'})
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate({'string': 'string', 'extra': 'invalid'})
 
 
 class TestSchemaLoadForm(unittest.TestCase):

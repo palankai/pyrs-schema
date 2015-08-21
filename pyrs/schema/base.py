@@ -14,14 +14,32 @@ from . import formats
 class Schema(object):
     _creation_index = 0
     _schema = None
+    _attrs = None
 
-    def __init__(self, schema=None):
+    def __init__(self, _schema=None, **attrs):
         self._creation_index = Schema._creation_index
         Schema._creation_index += 1
-        if schema and self._schema:
+        if _schema and self._schema:
             raise AttributeError("The declared schema shouldn't be redefined")
-        if schema:
-            self._schema = schema
+        if _schema:
+            self._schema = _schema
+        if self.__class__._attrs is not None:
+            self._attrs = self.__class__._attrs.copy()
+        else:
+            self._attrs = collections.OrderedDict()
+        self._attrs.update(attrs)
+
+    def __getitem__(self, name):
+        return self._attrs[name]
+
+    def __setitem__(self, name, value):
+        self._attrs[name] = value
+
+    def keys(self):
+        return self._attrs.keys()
+
+    def get(self, name, default=None):
+        return self._attrs.get(name, default)
 
     def get_schema(self, context=None):
         return self._schema
@@ -33,9 +51,6 @@ class Schema(object):
             self._value = self.to_python(obj, context=context)
             return self._value
         raise ValueError('Unrecognised input format')
-
-    def get(self, name, default=None):
-        return default
 
     def dump(self, obj, context=None):
         obj = self.to_json(obj, context=context)
@@ -155,24 +170,7 @@ class Base(Schema):
     _properties = None
 
     def __init__(self, **attrs):
-        super(Base, self).__init__()
-        if self.__class__._attrs is not None:
-            self._attrs = self.__class__._attrs.copy()
-        else:
-            self._attrs = collections.OrderedDict()
-        self._attrs.update(attrs)
-
-    def __getitem__(self, name):
-        return self._attrs[name]
-
-    def __setitem__(self, name, value):
-        self._attrs[name] = value
-
-    def keys(self):
-        return self._attrs.keys()
-
-    def get(self, name, default=None):
-        return self._attrs.get(name, default)
+        super(Base, self).__init__(**attrs)
 
     def get_schema(self, context=None):
         if context is not None:

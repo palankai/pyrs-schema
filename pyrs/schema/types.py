@@ -1,7 +1,7 @@
 """
 This module introduce the basic schema types.
 """
-
+import collections
 import datetime
 import json
 
@@ -77,29 +77,73 @@ class Array(base.Base):
         if self.get('unique_items') is not None:
             schema['uniqueItems'] = self.get('unique_items')
         if self.get('items'):
-            if isinstance(self.get('items'), base.Schema):
-                schema['items'] = self.get('items').get_schema(context=context)
-            elif isinstance(self.get('items'), (list, tuple)):
-                items = []
-                for item in self.get('items'):
-                    if isinstance(item, base.Schema):
-                        items.append(item.get_schema(context=context))
-                    else:
-                        items.append(item.get_schema(context))
-                schema['items'] = items
+            if isinstance(self.get('items'), (list, tuple)):
+                schema['items'] = [
+                    s.get_schema(context=context) for s in self.get('items')
+                ]
             else:
-                schema['items'] = self.get('items')
+                schema['items'] = self.get('items').get_schema(context=context)
         return schema
 
 
 class Object(base.Base):
-    """This is the main class of objects"""
+    """Declarative schema object
+
+    Object specific attributes:
+        additional:
+            boolean value: enable or disable extra items on the object
+            schema: items which are valid against the schema allowed to extend
+        min_properties:
+            An object instance is valid against `min_properties` if its number
+            of properties is greater than, or equal to, the value.
+        max_properties:
+            An object instance is valid against `max_properties` if its number
+            of properties is less than, or equal to, the value.
+        pattern:
+            Should be a dict where the keys are valid regular excpressions
+            and the values are schema instances. The object instance is valid
+            if the extra properties (which are not listed as property) valid
+            against the schema while name is match on the pattern.
+
+        Be careful, the pattern sould be explicit as possible, if the pattern
+        match on any normal property the validation should be successful
+        against them as well.
+
+        A normal object should looks like the following:
+
+        .. code:: python
+
+            class Translation(types.Object):
+                keyword = types.String()
+                value = types.String()
+
+                class Attrs:
+                    additional = False
+                    patterns = {
+                        'value_[a-z]{2}': types.String()
+                    }
+    """
     _type = "object"
 
     def make_schema(self, context=None):
         schema = super(Object, self).make_schema(context=context)
         if 'description' not in schema and self.__doc__:
             schema['description'] = self.__doc__
+        if self.get('additional') is not None:
+            if isinstance(self.get('additional'), bool):
+                schema['additionalProperties'] = self.get('additional')
+            else:
+                schema['additionalProperties'] = \
+                    self.get('additional').get_schema(context=context)
+        if self.get('min_properties') is not None:
+            schema['minProperties'] = self.get('min_properties')
+        if self.get('max_properties') is not None:
+            schema['maxProperties'] = self.get('max_properties')
+        if self.get('patterns'):
+            patterns = collections.OrderedDict()
+            for reg, pattern in self.get('patterns').items():
+                patterns[reg] = pattern.get_schema(context=context)
+            schema['patternProperties'] = patterns
         return schema
 
 
