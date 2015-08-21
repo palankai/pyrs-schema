@@ -22,7 +22,7 @@ class TestBase(unittest.TestCase):
             res = b.load('"Hello"')
 
         self.assertEqual(res, "Hello")
-        validate.assert_called_with("Hello")
+        validate.assert_called_with("Hello", context=None)
 
     def test_dump(self):
         b = base.Base()
@@ -30,7 +30,7 @@ class TestBase(unittest.TestCase):
             res = b.dump("Hello")
 
         self.assertEqual(res, '"Hello"')
-        validate.assert_called_with("Hello")
+        validate.assert_called_with("Hello", context=None)
 
     def test_get_schema(self):
         with mock.patch.object(base.Base, "_type", new="string"):

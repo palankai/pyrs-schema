@@ -15,13 +15,13 @@ from . import formats
 class String(base.Base):
     _type = "string"
 
-    def make_schema(self):
-        schema = super(String, self).make_schema()
+    def make_schema(self, context=None):
+        schema = super(String, self).make_schema(context=context)
         if self.get("pattern"):
             schema["pattern"] = self["pattern"]
         return schema
 
-    def to_object(self, value):
+    def to_object(self, value, context=None):
         return value
 
 
@@ -66,8 +66,8 @@ class Array(base.Base):
     """
     _type = "array"
 
-    def make_schema(self):
-        schema = super(Array, self).make_schema()
+    def make_schema(self, context=None):
+        schema = super(Array, self).make_schema(context=context)
         if self.get('additional') is not None:
             schema['additionalItems'] = self.get('additional')
         if self.get('max_items') is not None:
@@ -78,14 +78,14 @@ class Array(base.Base):
             schema['uniqueItems'] = self.get('unique_items')
         if self.get('items'):
             if isinstance(self.get('items'), base.Schema):
-                schema['items'] = self.get('items').get_schema()
+                schema['items'] = self.get('items').get_schema(context=context)
             elif isinstance(self.get('items'), (list, tuple)):
                 items = []
                 for item in self.get('items'):
                     if isinstance(item, base.Schema):
-                        items.append(item.get_schema())
+                        items.append(item.get_schema(context=context))
                     else:
-                        items.append(item.get_schema())
+                        items.append(item.get_schema(context))
                 schema['items'] = items
             else:
                 schema['items'] = self.get('items')
@@ -96,8 +96,8 @@ class Object(base.Base):
     """This is the main class of objects"""
     _type = "object"
 
-    def make_schema(self):
-        schema = super(Object, self).make_schema()
+    def make_schema(self, context=None):
+        schema = super(Object, self).make_schema(context=context)
         if 'description' not in schema and self.__doc__:
             schema['description'] = self.__doc__
         return schema
@@ -106,7 +106,7 @@ class Object(base.Base):
 class Date(String):
     _attrs = {"format": "date"}
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, datetime.date):
             return value
         try:
@@ -114,7 +114,7 @@ class Date(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid date '%s'" % value)
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.date):
             return isodate.date_isoformat(value)
         if isinstance(value, six.string_types):
@@ -125,7 +125,7 @@ class Date(String):
 class Time(String):
     _attrs = {"format": "time"}
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, datetime.time):
             return value
         try:
@@ -133,7 +133,7 @@ class Time(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid time '%s'" % value)
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.time_isoformat(value)
         if isinstance(value, six.string_types):
@@ -144,7 +144,7 @@ class Time(String):
 class DateTime(String):
     _attrs = {"format": "datetime"}
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, datetime.datetime):
             return value
         try:
@@ -152,7 +152,7 @@ class DateTime(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid datetime '%s'" % value)
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.datetime_isoformat(value)
         if isinstance(value, six.string_types):
@@ -163,7 +163,7 @@ class DateTime(String):
 class Duration(String):
     _attrs = {"format": "duration"}
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         try:
@@ -171,7 +171,7 @@ class Duration(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid duration '%s'" % value)
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return isodate.duration_isoformat(value)
         if isinstance(value, (int, float)):
@@ -185,7 +185,7 @@ class Duration(String):
 
 class TimeDelta(Number):
 
-    def to_python(self, value):
+    def to_python(self, value, context=None):
         if isinstance(value, six.string_types):
             value = json.loads(value)
         if isinstance(value, (int, float)):
@@ -194,7 +194,7 @@ class TimeDelta(Number):
             return value
         raise ValueError("Invalid type of timedelta '%s'" % type(value))
 
-    def to_json(self, value):
+    def to_json(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return value.total_seconds()
         if isinstance(value, (int, float)):
@@ -209,13 +209,13 @@ class Enum(base.Base):
     :type enum: list
     """
 
-    def make_schema(self):
+    def make_schema(self, context=None):
         """Ensure the generic schema, remove `types`
 
         :return: Gives back the schema
         :rtype: dict
         """
-        schema = super(Enum, self).make_schema()
+        schema = super(Enum, self).make_schema(context=None)
         schema.pop("type")
         if self.get("enum"):
             schema["enum"] = self["enum"]
@@ -224,8 +224,8 @@ class Enum(base.Base):
 
 class Ref(base.Base):
 
-    def make_schema(self):
-        schema = super(Ref, self).make_schema()
+    def make_schema(self, context=None):
+        schema = super(Ref, self).make_schema(context=context)
         schema.pop("type")
         assert not schema
         return {"$ref": "#/definitions/"+self["ref"]}

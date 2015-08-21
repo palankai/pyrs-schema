@@ -173,7 +173,7 @@ class TestSchemaToPython(unittest.TestCase):
     def test_special_type(self):
 
         class Spec(types.String):
-            def to_python(self, src):
+            def to_python(self, src, context=None):
                 if src.lower() == "yes":
                     return True
                 else:
@@ -202,7 +202,7 @@ class TestSchemaToJson(unittest.TestCase):
     def test_special_type(self):
 
         class Spec(types.String):
-            def to_json(self, src):
+            def to_json(self, src, context=None):
                 return "*******"
 
         class MyObject(types.Object):
