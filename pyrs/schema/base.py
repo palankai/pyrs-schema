@@ -83,6 +83,13 @@ class Schema(object):
         """Convert the value to python object, make validation possible"""
         return json.loads(value)
 
+    def __eq__(self, other):
+        if isinstance(other, dict):
+            return self.get_schema() == other
+        if isinstance(other, Schema):
+            return self.get_schema() == other.get_schema()
+        return id(self) == id(other)
+
 
 class DeclarativeMetaclass(type):
     def __new__(mcls, name, bases, attrs):
@@ -258,7 +265,6 @@ def _types_msg(instance, types, hint=''):
 def _validate_type_draft4(validator, types, instance, schema):
     if isinstance(types, six.string_types):
         types = [types]
-
     if (
             'string' in types and
             'string' in schema.get('type') and

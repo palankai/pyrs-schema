@@ -111,6 +111,76 @@ class TestArray(unittest.TestCase):
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             t.validate("Hello")
 
+    def test_validation_unique_items(self):
+        t = types.Array(unique_items=True)
+        t.validate([])
+        t.validate([1, 2, 3])
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate([1, 2, 2])
+
+    def test_validation_min_max_items(self):
+        t = types.Array(min_items=2, max_items=4)
+        t.validate([1, 2, 3])
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate("Hello")
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate([])
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate([1])
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate([1, 2, 3, 4, 5])
+
+    def test_schema_with_items(self):
+        t = types.Array(items=types.String(), additional=False)
+
+        self.assertEqual(
+            t.get_schema(),
+            {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'additionalItems': False
+            }
+        )
+        t.validate(['1', '2', '3'])
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate([1, 2, 3])
+
+    def test_schema_with_items_list(self):
+        t = types.Array(items=[types.String()])
+
+        self.assertEqual(
+            t.get_schema(),
+            {
+                'type': 'array',
+                'items': [{'type': 'string'}],
+            }
+        )
+        t.validate(['1', '2', '3'])
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate([1, 2, 3])
+
+    def test_schema_with_items_list_strict(self):
+        t = types.Array(items=[types.String()], additional=False)
+
+        self.assertEqual(
+            t.get_schema(),
+            {
+                'type': 'array',
+                'items': [{'type': 'string'}],
+                'additionalItems': False
+            }
+        )
+        t.validate(['1'])
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate(['1', '2', '3'])
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            t.validate([1, 2, 3])
+
 
 class TestDate(unittest.TestCase):
 

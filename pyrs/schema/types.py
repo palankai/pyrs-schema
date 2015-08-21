@@ -38,7 +38,58 @@ class Boolean(base.Base):
 
 
 class Array(base.Base):
+    """
+    Successful validation of an array instance with regards to these two
+    keywords is determined as follows:
+
+    if "items" is not present, or its value is an object, validation of
+    the instance always succeeds, regardless of the value of "additional"
+
+    if the value of "additional" is boolean value true or an object,
+    validation of the instance always succeeds;
+
+    if the value of "additional" is boolean value false and the value of
+    "items" is an array, the instance is valid if its size is less than,
+    or equal to, the size of "items".
+
+    Array specific options:
+        min_items:
+            An array instance is valid against "min_items" if its size is
+            greater than, or equal to, the value of this keyword.
+        max_items:
+            An array instance is valid against "max_items" if its size is
+            less than, or equal to, the value of this keyword.
+        unique_items:
+            If this keyword has boolean value false, the instance validates
+            successfully. If it has boolean value true, the instance validates
+            successfully if all of its elements are unique.
+    """
     _type = "array"
+
+    def make_schema(self):
+        schema = super(Array, self).make_schema()
+        if self.get('additional') is not None:
+            schema['additionalItems'] = self.get('additional')
+        if self.get('max_items') is not None:
+            schema['maxItems'] = self.get('max_items')
+        if self.get('min_items') is not None:
+            schema['minItems'] = self.get('min_items')
+        if self.get('unique_items') is not None:
+            schema['uniqueItems'] = self.get('unique_items')
+        if self.get('items'):
+            if isinstance(self.get('items'), base.Schema):
+                schema['items'] = self.get('items').get_schema()
+            elif isinstance(self.get('items'), (list, tuple)):
+                items = []
+                for item in self.get('items'):
+                    if isinstance(item, base.Schema):
+                        items.append(item.get_schema())
+                    else:
+                        items.append(item.get_schema())
+                schema['items'] = items
+            else:
+                schema['items'] = self.get('items')
+        return schema
 
 
 class Object(base.Base):
