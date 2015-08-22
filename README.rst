@@ -12,6 +12,10 @@ MicroService framework :: Schema
    :target: http://pyrs-schema.readthedocs.org/en/stable/
    :alt: Documentation Status
 
+Project hompage: `<https://github.com/palankai/pyrs-schema>`_
 
-This package implement the schema.
-Schame provide models and types.
+Documentation: `<http://pyrs-schema.readthedocs.org/>`_
+
+This package implement the schema part.
+Schame provides primitive and complex types, validation based on that and also
+provide flexible and extensible API for serialisation.
