@@ -40,6 +40,7 @@ Nutshell
 
     writer = schema.JSONWriter(UserSchema)
     jsonstring = writer.write(data)
+    jsonschemastr = writer.writeschema()
 
 Features
 --------
