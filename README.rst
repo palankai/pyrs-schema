@@ -25,6 +25,22 @@ did good job but not extensible enough.
 Also writing easily an API which is satisfy every expectations of projects,
 without coupled restrictions sometimes really hard.
 
+Nutshell
+--------
+
+.. code:: python
+
+    from pyrs import schema
+
+    class UserSchema(schema.Object):
+        version = schema.Version(version='1.0')
+        username = schema.StringField(required=True)
+        password = schema.StringField(required=True, tags=['writeonly'])
+        email = schema.EmailField(title='Registered email address')
+
+    writer = schema.JSONWriter(UserSchema)
+    jsonstring = writer.write(data)
+
 Features
 --------
 - Easy schema definition
