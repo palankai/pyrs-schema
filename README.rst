@@ -39,7 +39,8 @@ Nutshell
         email = schema.EmailField(title='Registered email address')
 
     writer = schema.JSONWriter(UserSchema)
-    jsonstring = writer.write(data)
+    writer.validate(data) # raise exception if it someting bad happen
+    jsonstring = writer.write(data) # The validation also happens
     jsonschemastr = writer.writeschema()
 
 Features
