@@ -41,6 +41,7 @@ Modules
 
    schema
    types
+   schemaio
    formats
    exceptions
 

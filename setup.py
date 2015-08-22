@@ -13,9 +13,10 @@ setup(
     author_email='csaba.palankai@gmail.com',
     packages=find_packages(),
     include_package_data=True,
-    version='0.5.1',
+    version='0.5.2',
     description="Python microservice framework",
     long_description=read('README.rst'),
+    url='https://github.com/palankai/pyrs-schema',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
