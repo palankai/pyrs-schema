@@ -7,7 +7,7 @@ Exceptions
    Simple import from jsonschema errors
 
 
-.. automodule:: schema.exceptions
+.. automodule:: pyrs.schema.exceptions
     :members:
     :undoc-members:
     :show-inheritance:

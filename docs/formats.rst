@@ -3,7 +3,7 @@ Formats
 =======
 
 
-.. automodule:: schema.formats
+.. automodule:: pyrs.schema.formats
     :members:
     :undoc-members:
     :show-inheritance:

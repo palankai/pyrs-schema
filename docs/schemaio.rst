@@ -2,7 +2,7 @@
 Schema IO
 =========
 
-.. automodule:: schema.schemaio
+.. automodule:: pyrs.schema.schemaio
    :members:
    :undoc-members:
    :show-inheritance:

@@ -2,7 +2,7 @@
 Basic types
 ===========
 
-.. automodule:: schema.types
+.. automodule:: pyrs.schema.types
     :members:
     :undoc-members:
     :show-inheritance:

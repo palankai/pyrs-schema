@@ -2,7 +2,7 @@
 Base module
 ===========
 
-.. automodule:: schema.base
+.. automodule:: pyrs.schema.base
     :members:
     :undoc-members:
     :show-inheritance:
