@@ -13,7 +13,7 @@ setup(
     author_email='csaba.palankai@gmail.com',
     packages=find_packages(),
     include_package_data=True,
-    version='0.5.3',
+    version='0.5.4',
     description="Python microservice framework",
     long_description=read('README.rst'),
     url='https://github.com/palankai/pyrs-schema',
@@ -36,8 +36,5 @@ setup(
     ],
     keywords=('service', 'rest', 'restful', 'swagger', 'resource'),
     zip_safe=False,
-    namespace_packages = [
-        'pyrs',
-    ],
     install_requires=[r for r in read("requirements.txt").split("\n") if r],
 )
