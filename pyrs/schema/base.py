@@ -48,14 +48,14 @@ class Schema(object):
     def load(self, value, context=None):
         if isinstance(value, six.string_types):
             obj = json.loads(value)
-            self.validate_json(obj, context=context)
+            self.validate_dict(obj, context=context)
             self._value = self.to_python(obj, context=context)
             return self._value
         raise ValueError('Unrecognised input format')
 
     def dump(self, obj, context=None):
-        obj = self.to_json(obj, context=context)
-        self.validate_json(obj, context=context)
+        obj = self.to_dict(obj, context=context)
+        self.validate_dict(obj, context=context)
         return self._dump(obj, context=context)
 
     def _dump(self, obj, context=None):
@@ -78,9 +78,9 @@ class Schema(object):
         return _make_validator(self.get_schema(context=context))
 
     def validate(self, obj, context=None):
-        self.validate_json(self.to_json(obj, context=context))
+        self.validate_dict(self.to_dict(obj, context=context))
 
-    def validate_json(self, obj, context=None):
+    def validate_dict(self, obj, context=None):
         self.get_validator(context=context).validate(obj)
 
     def get_validator(self, context=None):
@@ -91,8 +91,8 @@ class Schema(object):
         self._validator = self.make_validator(context=context)
         return self._validator
 
-    def to_json(self, value, context=None):
-        """Convert the value to a JSON compatible value"""
+    def to_dict(self, value, context=None):
+        """Convert the value to a dict of primitives"""
         return value
 
     def to_python(self, value, context=None):

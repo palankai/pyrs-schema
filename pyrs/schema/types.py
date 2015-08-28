@@ -152,7 +152,6 @@ class Object(base.Base):
             for reg, pattern in self.get_attr('patterns').items():
                 patterns[reg] = pattern.get_schema(context=context)
             schema['patternProperties'] = patterns
-        # if self._fields is not None:
         if context is None:
             context = {}
         attr_exclude_tags = lib.ensure_set(self.get_attr('exclude_tags'))
@@ -202,7 +201,7 @@ class Object(base.Base):
                 value[field] = by_name[field].to_object(
                     value[field], context=context
                 )
-            self.validate_json(value, context=context)
+            self.validate_dict(value, context=context)
             self._value = self.to_python(value, context=context)
             return self._value
         return super(Object, self).load(value, context=context)
@@ -220,7 +219,7 @@ class Object(base.Base):
         res.update(value)
         return res
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         """Convert the value to a JSON compatible value"""
         if value is None:
             return None
@@ -229,7 +228,7 @@ class Object(base.Base):
         for field in list(set(value) & set(self._fields)):
             schema = self._fields.get(field)
             res[schema.get_attr('name', field)] = \
-                schema.to_json(value.pop(field), context=context)
+                schema.to_dict(value.pop(field), context=context)
         res.update(value)
         return res
 
@@ -245,7 +244,7 @@ class Date(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid date '%s'" % value)
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.date):
             return isodate.date_isoformat(value)
         if isinstance(value, six.string_types):
@@ -264,7 +263,7 @@ class Time(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid time '%s'" % value)
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.time_isoformat(value)
         if isinstance(value, six.string_types):
@@ -283,7 +282,7 @@ class DateTime(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid datetime '%s'" % value)
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.datetime_isoformat(value)
         if isinstance(value, six.string_types):
@@ -302,7 +301,7 @@ class Duration(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid duration '%s'" % value)
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return isodate.duration_isoformat(value)
         if isinstance(value, (int, float)):
@@ -325,7 +324,7 @@ class TimeDelta(Number):
             return value
         raise ValueError("Invalid type of timedelta '%s'" % type(value))
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return value.total_seconds()
         if isinstance(value, (int, float)):

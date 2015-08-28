@@ -194,19 +194,19 @@ class TestSchemaToPython(unittest.TestCase):
 
 class TestSchemaToJson(unittest.TestCase):
 
-    def test_schema_to_json(self):
+    def test_schema_to_dict(self):
         class MyObject(types.Object):
             num = types.Integer()
             string = types.String(name="NewName")
 
         t = MyObject()
-        p = t.to_json({"num": 1, "string": "hi", "unknown": "x"})
+        p = t.to_dict({"num": 1, "string": "hi", "unknown": "x"})
         self.assertEqual(p, {"num": 1, "NewName": "hi", 'unknown': 'x'})
 
     def test_special_type(self):
 
         class Spec(types.String):
-            def to_json(self, src, context=None):
+            def to_dict(self, src, context=None):
                 return "*******"
 
         class MyObject(types.Object):
@@ -214,7 +214,7 @@ class TestSchemaToJson(unittest.TestCase):
             password = Spec()
 
         t = MyObject()
-        p = t.to_json({'username': 'user', 'password': 'secret'})
+        p = t.to_dict({'username': 'user', 'password': 'secret'})
         self.assertEqual(p, {'username': 'user', 'password': '*******'})
 
 

@@ -17,7 +17,7 @@ class TestBase(unittest.TestCase):
 
     def test_load(self):
         b = base.Base()
-        with mock.patch.object(b, "validate_json") as validate:
+        with mock.patch.object(b, "validate_dict") as validate:
             res = b.load('"Hello"')
 
         self.assertEqual(res, "Hello")
@@ -25,7 +25,7 @@ class TestBase(unittest.TestCase):
 
     def test_dump(self):
         b = base.Base()
-        with mock.patch.object(b, "validate_json") as validate:
+        with mock.patch.object(b, "validate_dict") as validate:
             res = b.dump("Hello")
 
         self.assertEqual(res, '"Hello"')
