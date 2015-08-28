@@ -14,7 +14,9 @@ MicroService framework :: Schema
 
 
 Project hompage: `<https://github.com/palankai/pyrs-schema>`_.
+
 Documentation: `<http://pyrs-schema.readthedocs.org/>`_.
+
 Issues: `<https://github.com/palankai/pyrs-schema/issues>`_.
 
 
