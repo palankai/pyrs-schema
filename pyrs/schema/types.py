@@ -3,7 +3,6 @@ This module introduce the basic schema types.
 """
 import collections
 import datetime
-import json
 
 import isodate
 import six
@@ -316,8 +315,6 @@ class Duration(String):
 class TimeDelta(Number):
 
     def to_python(self, value, context=None):
-        if isinstance(value, six.string_types):
-            value = json.loads(value)
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         if isinstance(value, datetime.timedelta):
