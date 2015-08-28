@@ -10,6 +10,7 @@ import six
 
 from . import base
 from . import formats
+from . import lib
 
 
 class String(base.Base):
@@ -151,6 +152,32 @@ class Object(base.Base):
             for reg, pattern in self.get_attr('patterns').items():
                 patterns[reg] = pattern.get_schema(context=context)
             schema['patternProperties'] = patterns
+        # if self._fields is not None:
+        if context is None:
+            context = {}
+        attr_exclude_tags = lib.ensure_set(self.get_attr('exclude_tags'))
+        ctx_exclude_tags = lib.ensure_set(context.get('exclude_tags'))
+        exclude_tags = attr_exclude_tags | ctx_exclude_tags
+        if attr_exclude_tags:
+            context = context.copy()
+            context['exclude_tags'] = exclude_tags
+        required = []
+        properties = collections.OrderedDict()
+        for key, prop in self._fields.items():
+            if key in self.get_attr('exclude', []):
+                continue
+            if self.get_attr('include'):
+                if key not in lib.ensure_list(self.get_attr('include')):
+                    continue
+            if exclude_tags and prop.has_tags(exclude_tags):
+                continue
+            name = prop.get_attr("name", key)
+            properties[name] = prop.get_schema(context=context)
+            if prop.get_attr('required'):
+                required.append(name)
+        schema["properties"] = properties
+        if required:
+            schema['required'] = sorted(required)
         return schema
 
     @property
@@ -164,6 +191,47 @@ class Object(base.Base):
         """
         self._fields.update(properties)
         self.invalidate(context=None)
+
+    def load(self, value, context=None):
+        if isinstance(value, dict):
+            value = value.copy()
+            by_name = {}
+            for field, prop in self._fields.items():
+                by_name[prop.get_attr('name', field)] = prop
+            for field in list(set(value) & set(by_name)):
+                value[field] = by_name[field].to_object(
+                    value[field], context=context
+                )
+            self.validate_json(value, context=context)
+            self._value = self.to_python(value, context=context)
+            return self._value
+        return super(Object, self).load(value, context=context)
+
+    def to_python(self, value, context=None):
+        """Convert the value to a real python object"""
+        value = value.copy()
+        res = {}
+        for field, schema in self._fields.items():
+            name = schema.get_attr('name', field)
+            if name in value:
+                res[field] = schema.to_python(
+                    value.pop(name), context=context
+                )
+        res.update(value)
+        return res
+
+    def to_json(self, value, context=None):
+        """Convert the value to a JSON compatible value"""
+        if value is None:
+            return None
+        res = {}
+        value = value.copy()
+        for field in list(set(value) & set(self._fields)):
+            schema = self._fields.get(field)
+            res[schema.get_attr('name', field)] = \
+                schema.to_json(value.pop(field), context=context)
+        res.update(value)
+        return res
 
 
 class Date(String):

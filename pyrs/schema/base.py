@@ -172,7 +172,6 @@ class Base(Schema):
     _type = None
     _attrs = None
     _definitions = None
-    _properties = None
 
     def __init__(self, **attrs):
         super(Base, self).__init__(**attrs)
@@ -186,15 +185,6 @@ class Base(Schema):
         return self._schema
 
     def make_schema(self, context=None):
-        if context is None:
-            context = {}
-        attr_exclude_tags = lib.ensure_set(self.get_attr('exclude_tags'))
-        ctx_exclude_tags = lib.ensure_set(context.get('exclude_tags'))
-        exclude_tags = attr_exclude_tags | ctx_exclude_tags
-        if attr_exclude_tags:
-            context = context.copy()
-            context['exclude_tags'] = exclude_tags
-
         schema = {"type": self._type}
         if self.get_attr("null"):
             schema["type"] = [self._type, "null"]
@@ -214,73 +204,10 @@ class Base(Schema):
                 definitions[prop.get_attr("name", name)] = \
                     prop.get_schema(context=context)
             schema["definitions"] = definitions
-        if self._fields is not None:
-            required = []
-            properties = collections.OrderedDict()
-            for key, prop in self._fields.items():
-                if key in self.get_attr('exclude', []):
-                    continue
-                if self.get_attr('include'):
-                    if key not in lib.ensure_list(self.get_attr('include')):
-                        continue
-                if exclude_tags and prop.has_tags(exclude_tags):
-                    continue
-                name = prop.get_attr("name", key)
-                properties[name] = prop.get_schema(context=context)
-                if prop.get_attr('required'):
-                    required.append(name)
-            schema["properties"] = properties
-            if required:
-                schema['required'] = sorted(required)
         return schema
 
     def get_name(self, default=None):
         return self.get_attr('name', default)
-
-    def load(self, value, context=None):
-        if isinstance(value, dict):
-            value = value.copy()
-            by_name = {}
-            for field, prop in self._fields.items():
-                by_name[prop.get_attr('name', field)] = prop
-            for field in list(set(value) & set(by_name)):
-                value[field] = by_name[field].to_object(
-                    value[field], context=context
-                )
-            self.validate_json(value, context=context)
-            self._value = self.to_python(value, context=context)
-            return self._value
-        return super(Base, self).load(value, context=context)
-
-    def to_python(self, value, context=None):
-        """Convert the value to a real python object"""
-        if self._fields is not None:
-            value = value.copy()
-            res = {}
-            for field, schema in self._fields.items():
-                name = schema.get_attr('name', field)
-                if name in value:
-                    res[field] = schema.to_python(
-                        value.pop(name), context=context
-                    )
-            res.update(value)
-            return res
-        return value
-
-    def to_json(self, value, context=None):
-        """Convert the value to a JSON compatible value"""
-        if value is None:
-            return None
-        if self._fields is not None:
-            res = {}
-            value = value.copy()
-            for field in list(set(value) & set(self._fields)):
-                schema = self._fields.get(field)
-                res[schema.get_attr('name', field)] = \
-                    schema.to_json(value.pop(field), context=context)
-            res.update(value)
-            return res
-        return value
 
     def invalidate(self, context=None):
         super(Base, self).invalidate(context=None)
