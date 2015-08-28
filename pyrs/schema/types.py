@@ -3,13 +3,13 @@ This module introduce the basic schema types.
 """
 import collections
 import datetime
-import json
 
 import isodate
 import six
 
 from . import base
 from . import formats
+from . import lib
 
 
 class String(base.Base):
@@ -17,8 +17,8 @@ class String(base.Base):
 
     def make_schema(self, context=None):
         schema = super(String, self).make_schema(context=context)
-        if self.get("pattern"):
-            schema["pattern"] = self["pattern"]
+        if self.get_attr("pattern"):
+            schema["pattern"] = self.get_attr("pattern")
         return schema
 
     def to_object(self, value, context=None):
@@ -68,21 +68,23 @@ class Array(base.Base):
 
     def make_schema(self, context=None):
         schema = super(Array, self).make_schema(context=context)
-        if self.get('additional') is not None:
-            schema['additionalItems'] = self.get('additional')
-        if self.get('max_items') is not None:
-            schema['maxItems'] = self.get('max_items')
-        if self.get('min_items') is not None:
-            schema['minItems'] = self.get('min_items')
-        if self.get('unique_items') is not None:
-            schema['uniqueItems'] = self.get('unique_items')
-        if self.get('items'):
-            if isinstance(self.get('items'), (list, tuple)):
+        if self.get_attr('additional') is not None:
+            schema['additionalItems'] = self.get_attr('additional')
+        if self.get_attr('max_items') is not None:
+            schema['maxItems'] = self.get_attr('max_items')
+        if self.get_attr('min_items') is not None:
+            schema['minItems'] = self.get_attr('min_items')
+        if self.get_attr('unique_items') is not None:
+            schema['uniqueItems'] = self.get_attr('unique_items')
+        if self.get_attr('items'):
+            if isinstance(self.get_attr('items'), (list, tuple)):
                 schema['items'] = [
-                    s.get_schema(context=context) for s in self.get('items')
+                    s.get_schema(context=context)
+                    for s in self.get_attr('items')
                 ]
             else:
-                schema['items'] = self.get('items').get_schema(context=context)
+                schema['items'] = \
+                    self.get_attr('items').get_schema(context=context)
         return schema
 
 
@@ -134,23 +136,46 @@ class Object(base.Base):
 
     def make_schema(self, context=None):
         schema = super(Object, self).make_schema(context=context)
-        if 'description' not in schema and self.__doc__:
-            schema['description'] = self.__doc__
-        if self.get('additional') is not None:
-            if isinstance(self.get('additional'), bool):
-                schema['additionalProperties'] = self.get('additional')
+        if self.get_attr('additional') is not None:
+            if isinstance(self.get_attr('additional'), bool):
+                schema['additionalProperties'] = self.get_attr('additional')
             else:
                 schema['additionalProperties'] = \
-                    self.get('additional').get_schema(context=context)
-        if self.get('min_properties') is not None:
-            schema['minProperties'] = self.get('min_properties')
-        if self.get('max_properties') is not None:
-            schema['maxProperties'] = self.get('max_properties')
-        if self.get('patterns'):
+                    self.get_attr('additional').get_schema(context=context)
+        if self.get_attr('min_properties') is not None:
+            schema['minProperties'] = self.get_attr('min_properties')
+        if self.get_attr('max_properties') is not None:
+            schema['maxProperties'] = self.get_attr('max_properties')
+        if self.get_attr('patterns'):
             patterns = collections.OrderedDict()
-            for reg, pattern in self.get('patterns').items():
+            for reg, pattern in self.get_attr('patterns').items():
                 patterns[reg] = pattern.get_schema(context=context)
             schema['patternProperties'] = patterns
+        if context is None:
+            context = {}
+        attr_exclude_tags = lib.ensure_set(self.get_attr('exclude_tags'))
+        ctx_exclude_tags = lib.ensure_set(context.get('exclude_tags'))
+        exclude_tags = attr_exclude_tags | ctx_exclude_tags
+        if attr_exclude_tags:
+            context = context.copy()
+            context['exclude_tags'] = exclude_tags
+        required = []
+        properties = collections.OrderedDict()
+        for key, prop in self._fields.items():
+            if key in self.get_attr('exclude', []):
+                continue
+            if self.get_attr('include'):
+                if key not in lib.ensure_list(self.get_attr('include')):
+                    continue
+            if exclude_tags and prop.has_tags(exclude_tags):
+                continue
+            name = prop.get_attr("name", key)
+            properties[name] = prop.get_schema(context=context)
+            if prop.get_attr('required'):
+                required.append(name)
+        schema["properties"] = properties
+        if required:
+            schema['required'] = sorted(required)
         return schema
 
     @property
@@ -165,6 +190,47 @@ class Object(base.Base):
         self._fields.update(properties)
         self.invalidate(context=None)
 
+    def load(self, value, context=None):
+        if isinstance(value, dict):
+            value = value.copy()
+            by_name = {}
+            for field, prop in self._fields.items():
+                by_name[prop.get_attr('name', field)] = prop
+            for field in list(set(value) & set(by_name)):
+                value[field] = by_name[field].to_object(
+                    value[field], context=context
+                )
+            self.validate_dict(value, context=context)
+            self._value = self.to_python(value, context=context)
+            return self._value
+        return super(Object, self).load(value, context=context)
+
+    def to_python(self, value, context=None):
+        """Convert the value to a real python object"""
+        value = value.copy()
+        res = {}
+        for field, schema in self._fields.items():
+            name = schema.get_attr('name', field)
+            if name in value:
+                res[field] = schema.to_python(
+                    value.pop(name), context=context
+                )
+        res.update(value)
+        return res
+
+    def to_dict(self, value, context=None):
+        """Convert the value to a JSON compatible value"""
+        if value is None:
+            return None
+        res = {}
+        value = value.copy()
+        for field in list(set(value) & set(self._fields)):
+            schema = self._fields.get(field)
+            res[schema.get_attr('name', field)] = \
+                schema.to_dict(value.pop(field), context=context)
+        res.update(value)
+        return res
+
 
 class Date(String):
     _attrs = {"format": "date"}
@@ -177,7 +243,7 @@ class Date(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid date '%s'" % value)
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.date):
             return isodate.date_isoformat(value)
         if isinstance(value, six.string_types):
@@ -196,7 +262,7 @@ class Time(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid time '%s'" % value)
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.time_isoformat(value)
         if isinstance(value, six.string_types):
@@ -215,7 +281,7 @@ class DateTime(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid datetime '%s'" % value)
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.datetime_isoformat(value)
         if isinstance(value, six.string_types):
@@ -234,7 +300,7 @@ class Duration(String):
         except isodate.ISO8601Error:
             raise ValueError("Invalid duration '%s'" % value)
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return isodate.duration_isoformat(value)
         if isinstance(value, (int, float)):
@@ -249,15 +315,13 @@ class Duration(String):
 class TimeDelta(Number):
 
     def to_python(self, value, context=None):
-        if isinstance(value, six.string_types):
-            value = json.loads(value)
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         if isinstance(value, datetime.timedelta):
             return value
         raise ValueError("Invalid type of timedelta '%s'" % type(value))
 
-    def to_json(self, value, context=None):
+    def to_dict(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return value.total_seconds()
         if isinstance(value, (int, float)):
@@ -280,8 +344,8 @@ class Enum(base.Base):
         """
         schema = super(Enum, self).make_schema(context=None)
         schema.pop("type")
-        if self.get("enum"):
-            schema["enum"] = self["enum"]
+        if self.get_attr("enum"):
+            schema["enum"] = self.get_attr("enum")
         return schema
 
 
@@ -291,4 +355,4 @@ class Ref(base.Base):
         schema = super(Ref, self).make_schema(context=context)
         schema.pop("type")
         assert not schema
-        return {"$ref": "#/definitions/"+self["ref"]}
+        return {"$ref": "#/definitions/"+self.get_attr("ref")}

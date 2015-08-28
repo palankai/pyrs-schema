@@ -29,24 +29,14 @@ class Schema(object):
             self._attrs = collections.OrderedDict()
         self._attrs.update(attrs)
 
-    def __getitem__(self, name):
-        return self._attrs[name]
-
-    def __setitem__(self, name, value):
-        self._attrs[name] = value
-        self.invalidate()
-
-    def keys(self):
-        return self._attrs.keys()
-
-    def get(self, name, default=None):
+    def get_attr(self, name, default=None):
         return self._attrs.get(name, default)
 
     def get_schema(self, context=None):
         return self._schema
 
     def get_tags(self):
-        return self.get('tags', [])
+        return self.get_attr('tags', set())
 
     def has_tags(self, tags):
         if not isinstance(tags, (list, tuple, set)):
@@ -58,14 +48,14 @@ class Schema(object):
     def load(self, value, context=None):
         if isinstance(value, six.string_types):
             obj = json.loads(value)
-            self.validate_json(obj, context=context)
+            self.validate_dict(obj, context=context)
             self._value = self.to_python(obj, context=context)
             return self._value
         raise ValueError('Unrecognised input format')
 
     def dump(self, obj, context=None):
-        obj = self.to_json(obj, context=context)
-        self.validate_json(obj, context=context)
+        obj = self.to_dict(obj, context=context)
+        self.validate_dict(obj, context=context)
         return self._dump(obj, context=context)
 
     def _dump(self, obj, context=None):
@@ -88,9 +78,9 @@ class Schema(object):
         return _make_validator(self.get_schema(context=context))
 
     def validate(self, obj, context=None):
-        self.validate_json(self.to_json(obj, context=context))
+        self.validate_dict(self.to_dict(obj, context=context))
 
-    def validate_json(self, obj, context=None):
+    def validate_dict(self, obj, context=None):
         self.get_validator(context=context).validate(obj)
 
     def get_validator(self, context=None):
@@ -101,8 +91,8 @@ class Schema(object):
         self._validator = self.make_validator(context=context)
         return self._validator
 
-    def to_json(self, value, context=None):
-        """Convert the value to a JSON compatible value"""
+    def to_dict(self, value, context=None):
+        """Convert the value to a dict of primitives"""
         return value
 
     def to_python(self, value, context=None):
@@ -182,7 +172,6 @@ class Base(Schema):
     _type = None
     _attrs = None
     _definitions = None
-    _properties = None
 
     def __init__(self, **attrs):
         super(Base, self).__init__(**attrs)
@@ -196,99 +185,29 @@ class Base(Schema):
         return self._schema
 
     def make_schema(self, context=None):
-        if context is None:
-            context = {}
-        attr_exclude_tags = lib.ensure_set(self.get('exclude_tags'))
-        ctx_exclude_tags = lib.ensure_set(context.get('exclude_tags'))
-        exclude_tags = attr_exclude_tags | ctx_exclude_tags
-        if attr_exclude_tags:
-            context = context.copy()
-            context['exclude_tags'] = exclude_tags
-
         schema = {"type": self._type}
-        if self.get("null"):
+        if self.get_attr("null"):
             schema["type"] = [self._type, "null"]
-        if self.get("enum"):
-            schema["enum"] = self["enum"]
-        if self.get("format"):
-            schema["format"] = self["format"]
-        if self.get("title"):
-            schema["title"] = self["title"]
-        if self.get("description"):
-            schema["description"] = self["description"]
-        if self.get("default"):
-            schema["default"] = self["default"]
+        if self.get_attr("enum"):
+            schema["enum"] = self.get_attr("enum")
+        if self.get_attr("format"):
+            schema["format"] = self.get_attr("format")
+        if self.get_attr("title"):
+            schema["title"] = self.get_attr("title")
+        if self.get_attr("description"):
+            schema["description"] = self.get_attr("description")
+        if self.get_attr("default"):
+            schema["default"] = self.get_attr("default")
         if self._definitions:
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
-                definitions[prop.get("name", name)] = \
+                definitions[prop.get_attr("name", name)] = \
                     prop.get_schema(context=context)
             schema["definitions"] = definitions
-        if self._fields is not None:
-            required = []
-            properties = collections.OrderedDict()
-            for key, prop in self._fields.items():
-                if key in self.get('exclude', []):
-                    continue
-                if self.get('include'):
-                    if key not in lib.ensure_list(self.get('include')):
-                        continue
-                if exclude_tags and prop.has_tags(exclude_tags):
-                    continue
-                name = prop.get("name", key)
-                properties[name] = prop.get_schema(context=context)
-                if prop.get('required'):
-                    required.append(name)
-            schema["properties"] = properties
-            if required:
-                schema['required'] = sorted(required)
         return schema
 
     def get_name(self, default=None):
-        return self.get('name', default)
-
-    def load(self, value, context=None):
-        if isinstance(value, dict):
-            by_name = {}
-            for field, prop in self._fields.items():
-                by_name[prop.get('name', field)] = prop
-            for field in list(set(value) & set(by_name)):
-                value[field] = by_name[field].to_object(
-                    value[field], context=context
-                )
-            self.validate_json(value, context=context)
-            self._value = self.to_python(value, context=context)
-            return self._value
-        return super(Base, self).load(value, context=context)
-
-    def to_python(self, value, context=None):
-        """Convert the value to a real python object"""
-        if self._fields is not None:
-            res = {}
-            for field, schema in self._fields.items():
-                name = schema.get('name', field)
-                if name in value:
-                    res[field] = schema.to_python(
-                        value.pop(name), context=context
-                    )
-            res.update(value)
-            return res
-        return value
-
-    def to_json(self, value, context=None):
-        """Convert the value to a JSON compatible value"""
-        if value is None:
-            return None
-        if self._fields is not None:
-            res = {}
-            value = value.copy()
-            for field in list(set(value) & set(self._fields)):
-                schema = self._fields.get(field)
-                res[schema.get('name', field)] = \
-                    schema.to_json(value.pop(field), context=context)
-            res.update(value)
-            return res
-        return value
+        return self.get_attr('name', default)
 
     def invalidate(self, context=None):
         super(Base, self).invalidate(context=None)
@@ -334,7 +253,7 @@ def _validate_type_draft4(validator, types, instance, schema):
                 isinstance(instance, (datetime.timedelta, int, float)):
             return
 
-        json_format_name = schema.get('format')
+        json_format_name = schema.get_attr('format')
         datetime_type_name = json_format_name.replace('-', '')
         hint = ' (for format %r strings, use a datetime.%s)' % (
             json_format_name, datetime_type_name
