@@ -249,6 +249,7 @@ class Base(Schema):
 
     def load(self, value, context=None):
         if isinstance(value, dict):
+            value = value.copy()
             by_name = {}
             for field, prop in self._fields.items():
                 by_name[prop.get('name', field)] = prop
@@ -264,6 +265,7 @@ class Base(Schema):
     def to_python(self, value, context=None):
         """Convert the value to a real python object"""
         if self._fields is not None:
+            value = value.copy()
             res = {}
             for field, schema in self._fields.items():
                 name = schema.get('name', field)
