@@ -27,8 +27,10 @@ class TestSchemaValidation(unittest.TestCase):
 
     def test_description_as_docstring(self):
         class MyObject(types.Object):
-            """Description"""
             num = types.Integer()
+
+            class Attrs:
+                description = "Description"
 
         t = MyObject(additional=None)
 

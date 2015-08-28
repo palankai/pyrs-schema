@@ -136,8 +136,6 @@ class Object(base.Base):
 
     def make_schema(self, context=None):
         schema = super(Object, self).make_schema(context=context)
-        if 'description' not in schema and self.__doc__:
-            schema['description'] = self.__doc__
         if self.get_attr('additional') is not None:
             if isinstance(self.get_attr('additional'), bool):
                 schema['additionalProperties'] = self.get_attr('additional')
