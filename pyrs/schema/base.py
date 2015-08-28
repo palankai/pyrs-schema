@@ -29,24 +29,14 @@ class Schema(object):
             self._attrs = collections.OrderedDict()
         self._attrs.update(attrs)
 
-    def __getitem__(self, name):
-        return self._attrs[name]
-
-    def __setitem__(self, name, value):
-        self._attrs[name] = value
-        self.invalidate()
-
-    def keys(self):
-        return self._attrs.keys()
-
-    def get(self, name, default=None):
+    def get_attr(self, name, default=None):
         return self._attrs.get(name, default)
 
     def get_schema(self, context=None):
         return self._schema
 
     def get_tags(self):
-        return self.get('tags', [])
+        return self.get_attr('tags', set())
 
     def has_tags(self, tags):
         if not isinstance(tags, (list, tuple, set)):
@@ -198,7 +188,7 @@ class Base(Schema):
     def make_schema(self, context=None):
         if context is None:
             context = {}
-        attr_exclude_tags = lib.ensure_set(self.get('exclude_tags'))
+        attr_exclude_tags = lib.ensure_set(self.get_attr('exclude_tags'))
         ctx_exclude_tags = lib.ensure_set(context.get('exclude_tags'))
         exclude_tags = attr_exclude_tags | ctx_exclude_tags
         if attr_exclude_tags:
@@ -206,38 +196,38 @@ class Base(Schema):
             context['exclude_tags'] = exclude_tags
 
         schema = {"type": self._type}
-        if self.get("null"):
+        if self.get_attr("null"):
             schema["type"] = [self._type, "null"]
-        if self.get("enum"):
-            schema["enum"] = self["enum"]
-        if self.get("format"):
-            schema["format"] = self["format"]
-        if self.get("title"):
-            schema["title"] = self["title"]
-        if self.get("description"):
-            schema["description"] = self["description"]
-        if self.get("default"):
-            schema["default"] = self["default"]
+        if self.get_attr("enum"):
+            schema["enum"] = self.get_attr("enum")
+        if self.get_attr("format"):
+            schema["format"] = self.get_attr("format")
+        if self.get_attr("title"):
+            schema["title"] = self.get_attr("title")
+        if self.get_attr("description"):
+            schema["description"] = self.get_attr("description")
+        if self.get_attr("default"):
+            schema["default"] = self.get_attr("default")
         if self._definitions:
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
-                definitions[prop.get("name", name)] = \
+                definitions[prop.get_attr("name", name)] = \
                     prop.get_schema(context=context)
             schema["definitions"] = definitions
         if self._fields is not None:
             required = []
             properties = collections.OrderedDict()
             for key, prop in self._fields.items():
-                if key in self.get('exclude', []):
+                if key in self.get_attr('exclude', []):
                     continue
-                if self.get('include'):
-                    if key not in lib.ensure_list(self.get('include')):
+                if self.get_attr('include'):
+                    if key not in lib.ensure_list(self.get_attr('include')):
                         continue
                 if exclude_tags and prop.has_tags(exclude_tags):
                     continue
-                name = prop.get("name", key)
+                name = prop.get_attr("name", key)
                 properties[name] = prop.get_schema(context=context)
-                if prop.get('required'):
+                if prop.get_attr('required'):
                     required.append(name)
             schema["properties"] = properties
             if required:
@@ -245,14 +235,14 @@ class Base(Schema):
         return schema
 
     def get_name(self, default=None):
-        return self.get('name', default)
+        return self.get_attr('name', default)
 
     def load(self, value, context=None):
         if isinstance(value, dict):
             value = value.copy()
             by_name = {}
             for field, prop in self._fields.items():
-                by_name[prop.get('name', field)] = prop
+                by_name[prop.get_attr('name', field)] = prop
             for field in list(set(value) & set(by_name)):
                 value[field] = by_name[field].to_object(
                     value[field], context=context
@@ -268,7 +258,7 @@ class Base(Schema):
             value = value.copy()
             res = {}
             for field, schema in self._fields.items():
-                name = schema.get('name', field)
+                name = schema.get_attr('name', field)
                 if name in value:
                     res[field] = schema.to_python(
                         value.pop(name), context=context
@@ -286,7 +276,7 @@ class Base(Schema):
             value = value.copy()
             for field in list(set(value) & set(self._fields)):
                 schema = self._fields.get(field)
-                res[schema.get('name', field)] = \
+                res[schema.get_attr('name', field)] = \
                     schema.to_json(value.pop(field), context=context)
             res.update(value)
             return res
@@ -336,7 +326,7 @@ def _validate_type_draft4(validator, types, instance, schema):
                 isinstance(instance, (datetime.timedelta, int, float)):
             return
 
-        json_format_name = schema.get('format')
+        json_format_name = schema.get_attr('format')
         datetime_type_name = json_format_name.replace('-', '')
         hint = ' (for format %r strings, use a datetime.%s)' % (
             json_format_name, datetime_type_name

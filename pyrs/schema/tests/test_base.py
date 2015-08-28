@@ -13,8 +13,7 @@ class TestBase(unittest.TestCase):
     def test_attrs(self):
         b = base.Base(attr=1)
 
-        self.assertEqual(b.get("attr"), 1)
-        self.assertEqual(list(b.keys()), ["attr"])
+        self.assertEqual(b.get_attr("attr"), 1)
 
     def test_load(self):
         b = base.Base()
