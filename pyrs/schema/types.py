@@ -321,16 +321,8 @@ class Object(base.Base):
                         context=context
                     )
                 except exceptions.ValidationErrors as ex:
-                    for error in ex.errors:
-                        if error['path']:
-                            error['path'] = name+'.'+error['path']
-                        errors.append(error)
-        if errors:
-            raise exceptions.ValidationErrors(
-                '%s validation error(s) raised' % len(errors),
-                value=value,
-                errors=errors
-            )
+                    self._update_errors_by_exception(errors, ex, name)
+        self._raise_exception_when_errors(errors, value)
         res.update(value)
         return res
 
@@ -340,12 +332,33 @@ class Object(base.Base):
             return None
         res = {}
         value = value.copy()
+        errors = []
         for field in list(set(value) & set(self._fields)):
             schema = self._fields.get(field)
-            res[schema.get_attr('name', field)] = \
-                schema.to_dict(value.pop(field), context=context)
+            name = schema.get_attr('name', field)
+            try:
+                res[name] = \
+                    schema.to_dict(value.pop(field), context=context)
+            except exceptions.ValidationErrors as ex:
+                self._update_errors_by_exception(errors, ex, name)
+
+        self._raise_exception_when_errors(errors, value)
         res.update(value)
         return res
+
+    def _update_errors_by_exception(self, errors, ex, name):
+        for error in ex.errors:
+            if error['path']:
+                error['path'] = name+'.'+error['path']
+            errors.append(error)
+
+    def _raise_exception_when_errors(self, errors, value):
+        if errors:
+            raise exceptions.ValidationErrors(
+                '%s validation error(s) raised' % len(errors),
+                value=value,
+                errors=errors
+            )
 
 
 class Date(String):
@@ -370,6 +383,12 @@ class Date(String):
         if isinstance(value, six.string_types):
             self.to_python(value)
             return value
+        raise exceptions.ValidationError(
+            "Invalid date value '%s' and type %s" % (value, type(value)),
+            value=value,
+            invalid='type',
+            against='date'
+        )
 
 
 class Time(String):
@@ -394,6 +413,12 @@ class Time(String):
         if isinstance(value, six.string_types):
             self.to_pyton(value)
             return value
+        raise exceptions.ValidationError(
+            "Invalid time value '%s' and type %s" % (value, type(value)),
+            value=value,
+            invalid='type',
+            against='time'
+        )
 
 
 class DateTime(String):
@@ -418,6 +443,12 @@ class DateTime(String):
         if isinstance(value, six.string_types):
             self.to_pyton(value)
             return value
+        raise exceptions.ValidationError(
+            "Invalid datetime value '%s' and type %s" % (value, type(value)),
+            value=value,
+            invalid='type',
+            against='datetime'
+        )
 
 
 class Duration(String):
@@ -446,6 +477,12 @@ class Duration(String):
         if isinstance(value, six.string_types):
             self.to_python(value)
             return value
+        raise exceptions.ValidationError(
+            "Invalid duration value '%s' and type %s" % (value, type(value)),
+            value=value,
+            invalid='type',
+            against='timedelta'
+        )
 
 
 class TimeDelta(Number):
@@ -467,7 +504,12 @@ class TimeDelta(Number):
             return value.total_seconds()
         if isinstance(value, (int, float)):
             return value
-        raise ValueError("Invalid type of timedelta '%s'" % type(value))
+        raise exceptions.ValidationError(
+            "Invalid timedelta value '%s' and type %s" % (value, type(value)),
+            value=value,
+            invalid='type',
+            against='timedelta'
+        )
 
 
 class Enum(base.Base):

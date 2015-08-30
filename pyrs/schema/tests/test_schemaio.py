@@ -24,6 +24,16 @@ class TestSchemaWriter(unittest.TestCase):
             io.write()
 
 
+class TestValidator(unittest.TestCase):
+
+    def test_validate(self):
+        t1 = types.String()
+        io = schemaio.Validator(t1)
+
+        with self.assertRaises(NotImplementedError):
+            io.validate('"Hello"')
+
+
 class TestWriter(unittest.TestCase):
 
     def test_write(self):
@@ -46,58 +56,29 @@ class TestReader(unittest.TestCase):
 
 class TestJSONSchemaWriter(unittest.TestCase):
 
+    def test_extract(self):
+        t1 = types.String()
+        io = schemaio.JSONSchemaWriter(t1)
+
+        s = io.extract()
+        self.assertEqual(s, {'type': 'string'})
+
     def test_write(self):
         t1 = types.String()
         io = schemaio.JSONSchemaWriter(t1)
 
         s = io.write()
-        self.assertEqual(s, {'type': 'string'})
-
-    def test_dump(self):
-        t1 = types.String()
-        io = schemaio.JSONSchemaWriter(t1)
-
-        s = io.dump()
         self.assertEqual(s, '{"type": "string"}')
 
 
-class TestJSONWriter(unittest.TestCase):
-
-    def test_write(self):
-        t1 = types.String()
-        io = schemaio.JSONWriter(t1)
-
-        self.assertEqual(io.write('test'), '"test"')
-
-
-class TestJSONReader(unittest.TestCase):
-
-    def test_read_basic(self):
-        t1 = types.String()
-        io = schemaio.JSONReader(t1)
-
-        self.assertEqual(io.read('"test"'), 'test')
-
-    def test_raise_parse_error_when_incorrect_Data(self):
-        t1 = types.String()
-        io = schemaio.JSONReader(t1)
-
-        with self.assertRaises(exceptions.ParseError):
-            io.read(12)
-
-    def test_raise_parse_error(self):
-        t1 = types.String()
-        io = schemaio.JSONReader(t1)
-
-        with self.assertRaises(exceptions.ParseError):
-            io.read('text')
+class TestJSONSchemaValidator(unittest.TestCase):
 
     def test_validation_error(self):
         t1 = types.String()
-        io = schemaio.JSONReader(t1)
+        io = schemaio.JSONSchemaValidator(t1)
 
         with self.assertRaises(exceptions.ValidationErrors) as ctx:
-            io.read('12')
+            io.validate(12)
         ex = ctx.exception
 
         self.assertEqual(ex.value, 12)
@@ -113,10 +94,10 @@ class TestJSONReader(unittest.TestCase):
         class MyObject(types.Object):
             s1 = types.String()
             s2 = types.String()
-        io = schemaio.JSONReader(MyObject)
+        io = schemaio.JSONSchemaValidator(MyObject)
 
         with self.assertRaises(exceptions.ValidationErrors) as ctx:
-            io.read('{"s1": 12, "s2": 13}')
+            io.validate({"s1": 12, "s2": 13})
         ex = ctx.exception
 
         self.assertEqual(ex.errors[0]['message'], "12 is not of type 'string'")
@@ -136,10 +117,10 @@ class TestJSONReader(unittest.TestCase):
         class MyObject(types.Object):
             o1 = MyObjectMid()
 
-        io = schemaio.JSONReader(MyObject)
+        io = schemaio.JSONSchemaValidator(MyObject)
 
         with self.assertRaises(exceptions.ValidationErrors) as ctx:
-            io.read('{"o1": {"o2": {"s1": 12, "s2": "z"}}}')
+            io.validate({"o1": {"o2": {"s1": 12, "s2": "z"}}})
         ex = ctx.exception
         errors = sorted(ex.errors, key=lambda v: v['invalid'])
 
@@ -156,3 +137,35 @@ class TestJSONReader(unittest.TestCase):
         self.assertEqual(errors[2]['value'], 12)
         self.assertEqual(errors[2]['invalid'], 'type')
         self.assertEqual(errors[2]['against'], 'string')
+
+
+class TestJSONWriter(unittest.TestCase):
+
+    def test_write_basic(self):
+        t1 = types.String()
+        io = schemaio.JSONWriter(t1)
+
+        self.assertEqual(io.write('test'), '"test"')
+
+
+class TestJSONReader(unittest.TestCase):
+
+    def test_read_basic(self):
+        t1 = types.String()
+        io = schemaio.JSONReader(t1)
+
+        self.assertEqual(io.read('"test"'), 'test')
+
+    def test_raise_parse_error_when_incorrect_data(self):
+        t1 = types.String()
+        io = schemaio.JSONReader(t1)
+
+        with self.assertRaises(exceptions.ParseError):
+            io.read(12)
+
+    def test_raise_parse_error(self):
+        t1 = types.String()
+        io = schemaio.JSONReader(t1)
+
+        with self.assertRaises(exceptions.ParseError):
+            io.read('text')

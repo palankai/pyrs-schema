@@ -8,10 +8,12 @@ schema itself. It gives more flexibility and more extensibility.
     Note that this package in this version does nothing. Just give an early
     interface.
 """
+import datetime
 import inspect
 import json
 import six
 
+import isodate
 
 from . import base
 from . import exceptions
@@ -29,6 +31,17 @@ class SchemaIO(object):
             schema = schema()
         self.schema = schema
         self.context = context
+
+
+class Validator(SchemaIO):
+    """
+    Abstract base class of validators.
+    """
+
+    def validate(self, data):
+        raise NotImplementedError(
+            'The validate method of Validator is abstract'
+        )
 
 
 class SchemaWriter(SchemaIO):
@@ -89,24 +102,76 @@ class Reader(SchemaIO):
 class JSONSchemaWriter(SchemaWriter):
 
     def write(self, context=None):
+        return json.dumps(self.extract(context=context))
+
+    def extract(self, context=None):
         return self.schema.get_schema(context=context)
 
-    def dump(self, context=None):
-        return json.dumps(self.write(context=context))
+
+class JSONSchemaValidator(Validator):
+
+    def validate(self, data):
+        validator = base._make_validator(
+            self.schema.get_schema(context=self.context)
+        )
+        errors = []
+        for e in validator.iter_errors(data):
+            errors.append({
+                'error': 'ValidationError',
+                'message': e.message,
+                'value': e.instance,
+                'invalid': e.schema_path[-1],
+                'against': e.validator_value,
+                'path': ".".join(e.path),
+            })
+        if errors:
+            raise exceptions.ValidationErrors(
+                '%s validation error(s) raised' % len(errors),
+                value=data,
+                errors=errors
+            )
 
 
 class JSONWriter(Writer):
 
+    def __init__(self, schema, context=None):
+        super(JSONWriter, self).__init__(schema, context=context)
+        self.validator = JSONSchemaValidator(schema, context=context)
+
     def write(self, data):
-        return self.schema.dump(data)
+        data = self._to_dict(data)
+        self.validator.validate(data)
+        return self._dump(data)
+
+    def _to_dict(self, data):
+        return self.schema.to_dict(data, context=self.context)
+
+    def _dump(self, data):
+        return json.dumps(data, default=self._dump_default)
+
+    def _dump_default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return isodate.datetime_isoformat(obj)
+        elif isinstance(obj, datetime.date):
+            return isodate.date_isoformat(obj)
+        elif isinstance(obj, datetime.time):
+            return isodate.time_isoformat(obj)
+        elif isinstance(obj, datetime.timedelta):
+            return obj.total_seconds()
+        else:
+            raise TypeError(obj)
 
 
 class JSONReader(Reader):
 
+    def __init__(self, schema, context=None):
+        super(JSONReader, self).__init__(schema, context=context)
+        self.validator = JSONSchemaValidator(schema, context=context)
+
     def read(self, data):
         self._validate_format(data)
         value = self._load(data)
-        self._validate(value)
+        self.validator.validate(value)
         return self._to_python(value)
 
     def _validate_format(self, data):
@@ -122,27 +187,6 @@ class JSONReader(Reader):
             return json.loads(data)
         except ValueError as ex:
             raise exceptions.ParseError(ex.args[0], value=data)
-
-    def _validate(self, value):
-        validator = base._make_validator(
-            self.schema.get_schema(context=self.context)
-        )
-        errors = []
-        for e in validator.iter_errors(value):
-            errors.append({
-                'error': 'ValidationError',
-                'message': e.message,
-                'value': e.instance,
-                'invalid': e.schema_path[-1],
-                'against': e.validator_value,
-                'path': ".".join(e.path),
-            })
-        if errors:
-            raise exceptions.ValidationErrors(
-                '%s validation error(s) raised' % len(errors),
-                value=value,
-                errors=errors
-            )
 
     def _to_python(self, value):
         return self.schema.to_python(value, context=self.context)
