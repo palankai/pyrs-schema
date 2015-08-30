@@ -4,6 +4,14 @@ Changelog
 
 The [!] sign marks the incompatible changes.
 
+0.7.1
+-----
+
+Minor modifications
+~~~~~~~~~~~~~~~~~~~
+
+ * ``exceptions.*`` also imported in the ``pyrs.schema``
+
 0.7
 ---
 
