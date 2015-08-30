@@ -19,7 +19,9 @@ Contents
    schemaio
    formats
    exceptions
+   changelog
    license
+
 
 Indices and tables
 ------------------
