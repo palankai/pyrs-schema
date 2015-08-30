@@ -243,8 +243,14 @@ class JSONReader(Reader):
         except ValueError as ex:
             raise exceptions.ParseError(ex.args[0], value=data)
 
-    def _to_python(self, value):
-        return self.schema.to_python(value, context=self.context)
+    def _to_python(self, data):
+        if isinstance(self.schema, dict):
+            for k in set(data.keys()) & set(self.schema.keys()):
+                data[k] = self.schema[k].to_python(
+                    data[k], context=self.context
+                )
+            return data
+        return self.schema.to_python(data, context=self.context)
 
 
 class JSONFormReader(JSONReader):
@@ -257,7 +263,7 @@ class JSONFormReader(JSONReader):
         self._validate_format(data)
         data = data.copy()
         by_name = {}
-        for field, prop in self.schema.fields.items():
+        for field, prop in self._get_fields().items():
             by_name[prop.get_attr('name', field)] = prop
         for field in list(set(data) & set(by_name)):
             prop = by_name[field]
@@ -274,5 +280,7 @@ class JSONFormReader(JSONReader):
                 value=data
             )
 
-    def _to_python(self, data):
-        return self.schema.to_python(data, context=self.context)
+    def _get_fields(self):
+        if isinstance(self.schema, dict):
+            return self.schema
+        return self.schema.fields

@@ -4,6 +4,14 @@ Changelog
 
 The [!] sign marks the incompatible changes.
 
+0.7.3
+-----
+
+Fixes
+~~~~~
+
+ * Fix JSONReader / Form reader regarding dict input, dict schema
+
 0.7.2
 -----
 
