@@ -308,7 +308,7 @@ class Object(base.Base):
         res.update(value)
         return res
 
-    def to_dict(self, value, context=None):
+    def to_raw(self, value, context=None):
         """Convert the value to a JSON compatible value"""
         if value is None:
             return None
@@ -320,7 +320,7 @@ class Object(base.Base):
             name = schema.get_attr('name', field)
             try:
                 res[name] = \
-                    schema.to_dict(value.pop(field), context=context)
+                    schema.to_raw(value.pop(field), context=context)
             except exceptions.ValidationErrors as ex:
                 self._update_errors_by_exception(errors, ex, name)
 
@@ -359,7 +359,7 @@ class Date(String):
                 against='date'
             )
 
-    def to_dict(self, value, context=None):
+    def to_raw(self, value, context=None):
         if isinstance(value, datetime.date):
             return isodate.date_isoformat(value)
         if isinstance(value, six.string_types):
@@ -389,7 +389,7 @@ class Time(String):
                 against='time'
             )
 
-    def to_dict(self, value, context=None):
+    def to_raw(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.time_isoformat(value)
         if isinstance(value, six.string_types):
@@ -419,7 +419,7 @@ class DateTime(String):
                 against='datetime'
             )
 
-    def to_dict(self, value, context=None):
+    def to_raw(self, value, context=None):
         if isinstance(value, datetime.time):
             return isodate.datetime_isoformat(value)
         if isinstance(value, six.string_types):
@@ -449,7 +449,7 @@ class Duration(String):
                 against='duration'
             )
 
-    def to_dict(self, value, context=None):
+    def to_raw(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return isodate.duration_isoformat(value)
         if isinstance(value, (int, float)):
@@ -481,7 +481,7 @@ class TimeDelta(Number):
             against='timedelta'
         )
 
-    def to_dict(self, value, context=None):
+    def to_raw(self, value, context=None):
         if isinstance(value, datetime.timedelta):
             return value.total_seconds()
         if isinstance(value, (int, float)):

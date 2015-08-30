@@ -189,12 +189,12 @@ class JSONWriter(Writer):
         self.validator = select_json_validator(self.schema, context)
 
     def write(self, data):
-        data = self._to_dict(data)
+        data = self._to_raw(data)
         self.validator.validate(data)
         return self._dump(data)
 
-    def _to_dict(self, data):
-        return self.schema.to_dict(data, context=self.context)
+    def _to_raw(self, data):
+        return self.schema.to_raw(data, context=self.context)
 
     def _dump(self, data):
         return json.dumps(data, default=self._dump_default)

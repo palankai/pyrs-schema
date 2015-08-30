@@ -70,7 +70,7 @@ class Schema(object):
         raise ValueError('Unrecognised input format')
 
     def dump(self, obj, context=None):
-        obj = self.to_dict(obj, context=context)
+        obj = self.to_raw(obj, context=context)
         self.validate_dict(obj, context=context)
         return self._dump(obj, context=context)
 
@@ -94,7 +94,7 @@ class Schema(object):
         return _make_validator(self.get_schema(context=context))
 
     def validate(self, obj, context=None):
-        self.validate_dict(self.to_dict(obj, context=context))
+        self.validate_dict(self.to_raw(obj, context=context))
 
     def validate_dict(self, obj, context=None):
         self.get_validator(context=context).validate(obj)
@@ -107,7 +107,7 @@ class Schema(object):
         self._validator = self.make_validator(context=context)
         return self._validator
 
-    def to_dict(self, value, context=None):
+    def to_raw(self, value, context=None):
         """Convert the value to a dict of primitives"""
         return value
 
