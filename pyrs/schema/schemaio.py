@@ -17,6 +17,7 @@ import isodate
 
 from . import base
 from . import exceptions
+from . import types
 
 
 class SchemaIO(object):
@@ -190,3 +191,36 @@ class JSONReader(Reader):
 
     def _to_python(self, value):
         return self.schema.to_python(value, context=self.context)
+
+
+class JSONFormReader(JSONReader):
+
+    def __init__(self, schema, context=None):
+        if not isinstance(schema, types.Object):
+            raise TypeError('Schema should be Object type')
+        super(JSONFormReader, self).__init__(schema, context=context)
+        self.validator = JSONSchemaValidator(schema, context=context)
+
+    def read(self, data):
+        self._validate_format(data)
+        data = data.copy()
+        by_name = {}
+        for field, prop in self.schema.properties.items():
+            by_name[prop.get_attr('name', field)] = prop
+        for field in list(set(data) & set(by_name)):
+            prop = by_name[field]
+            if not isinstance(prop, types.String):
+                data[field] = self._load(data[field])
+        self.validator.validate(data)
+        return self._to_python(data)
+
+    def _validate_format(self, data):
+        if not isinstance(data, dict):
+            raise exceptions.ParseError(
+                'Unrecognised input format: %s given, dict type expected'
+                % type(data),
+                value=data
+            )
+
+    def _to_python(self, data):
+        return self.schema.to_python(data, context=self.context)

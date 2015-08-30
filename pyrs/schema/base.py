@@ -115,10 +115,6 @@ class Schema(object):
         """Convert the value to a real python object"""
         return value
 
-    def to_object(self, value, context=None):
-        """Convert the value to python object, make validation possible"""
-        return json.loads(value)
-
     def __eq__(self, other):
         if isinstance(other, dict):
             return self.get_schema() == other

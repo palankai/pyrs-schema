@@ -53,9 +53,6 @@ class String(base.Base):
             schema['maxLength'] = self.get_attr('max_len')
         return schema
 
-    def to_object(self, value, context=None):
-        return value
-
 
 class Number(base.Base):
     """
@@ -291,21 +288,6 @@ class Object(base.Base):
         """
         self._fields.update(properties)
         self.invalidate(context=None)
-
-    def load(self, value, context=None):
-        if isinstance(value, dict):
-            value = value.copy()
-            by_name = {}
-            for field, prop in self._fields.items():
-                by_name[prop.get_attr('name', field)] = prop
-            for field in list(set(value) & set(by_name)):
-                value[field] = by_name[field].to_object(
-                    value[field], context=context
-                )
-            self.validate_dict(value, context=context)
-            self._value = self.to_python(value, context=context)
-            return self._value
-        return super(Object, self).load(value, context=context)
 
     def to_python(self, value, context=None):
         """Convert the value to a real python object"""

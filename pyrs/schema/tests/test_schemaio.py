@@ -169,3 +169,34 @@ class TestJSONReader(unittest.TestCase):
 
         with self.assertRaises(exceptions.ParseError):
             io.read('text')
+
+
+class TestJSONFormReader(unittest.TestCase):
+
+    def test_load_form(self):
+        class MySub(types.Object):
+            sub = types.Integer()
+
+        class MyObject(types.Object):
+            num = types.Integer()
+            string = types.String(name="NewName")
+            arr = types.Array()
+            sub = MySub(additional=None)
+
+        t = MyObject(additional=None)
+        io = schemaio.JSONFormReader(t)
+        form = {
+            'num': '1',
+            'NewName': 'hi',
+            'sub': '{"sub": 1}',
+            'arr': '[1, 2, "hi"]',
+            'unknown': '{"any": "value"}'
+        }
+        r = io.read(form)
+        self.assertEqual(r, {
+            "num": 1,
+            "string": "hi",
+            'sub': {'sub': 1},
+            'arr': [1, 2, 'hi'],
+            'unknown': '{"any": "value"}'
+        })

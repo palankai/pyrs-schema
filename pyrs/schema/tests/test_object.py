@@ -310,36 +310,6 @@ class TestSchemaPattern(unittest.TestCase):
             t.validate({'string': 'string', 'extra': 'invalid'})
 
 
-class TestSchemaLoadForm(unittest.TestCase):
-
-    def test_load_form(self):
-        class MySub(types.Object):
-            sub = types.Integer()
-
-        class MyObject(types.Object):
-            num = types.Integer()
-            string = types.String(name="NewName")
-            arr = types.Array()
-            sub = MySub(additional=None)
-
-        t = MyObject(additional=None)
-        form = {
-            'num': '1',
-            'NewName': 'hi',
-            'sub': '{"sub": 1}',
-            'arr': '[1, 2, "hi"]',
-            'unknown': '{"any": "value"}'
-        }
-        r = t.load(form)
-        self.assertEqual(r, {
-            "num": 1,
-            "string": "hi",
-            'sub': {'sub': 1},
-            'arr': [1, 2, 'hi'],
-            'unknown': '{"any": "value"}'
-        })
-
-
 class TestSchemaExtend(unittest.TestCase):
 
     def test_procedural_extend(self):
