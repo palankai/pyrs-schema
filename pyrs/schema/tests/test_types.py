@@ -197,10 +197,10 @@ class TestDate(unittest.TestCase):
         v = t.to_raw(datetime.date(2012, 12, 24))
         self.assertEqual(v, '2012-12-24')
 
-    def test_loads(self):
+    def test_deserialize(self):
         t = types.Date()
 
-        v = t.load('"2012-12-24"')
+        v = t.to_python('2012-12-24')
         self.assertEqual(v, datetime.date(2012, 12, 24))
 
     def test_complex(self):
@@ -226,16 +226,16 @@ class TestDuration(unittest.TestCase):
         v = t.to_raw(datetime.timedelta(seconds=12))
         self.assertEqual(v, 'PT12S')
 
-    def test_loads(self):
+    def test_deserialize(self):
         t = types.Duration()
 
-        v = t.load('"PT12S"')
+        v = t.to_python('PT12S')
         self.assertEqual(v, datetime.timedelta(seconds=12))
 
-        v = t.load('12')
+        v = t.to_python(12)
         self.assertEqual(v, datetime.timedelta(seconds=12))
 
-        v = t.load('12.1')
+        v = t.to_python(12.1)
         self.assertEqual(v, datetime.timedelta(seconds=12, milliseconds=100))
 
     def test_complex(self):

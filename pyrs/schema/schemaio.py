@@ -191,12 +191,12 @@ class JSONWriter(Writer):
     def write(self, data):
         data = self._to_raw(data)
         self.validator.validate(data)
-        return self._dump(data)
+        return self._dumps(data)
 
     def _to_raw(self, data):
         return self.schema.to_raw(data, context=self.context)
 
-    def _dump(self, data):
+    def _dumps(self, data):
         return json.dumps(data, default=self._dump_default)
 
     def _dump_default(self, obj):
@@ -220,7 +220,7 @@ class JSONReader(Reader):
 
     def read(self, data):
         self._validate_format(data)
-        value = self._load(data)
+        value = self._loads(data)
         self.validator.validate(value)
         return self._to_python(value)
 
@@ -232,7 +232,7 @@ class JSONReader(Reader):
                 value=data
             )
 
-    def _load(self, data):
+    def _loads(self, data):
         try:
             return json.loads(data)
         except ValueError as ex:
@@ -259,7 +259,7 @@ class JSONFormReader(JSONReader):
         for field in list(set(data) & set(by_name)):
             prop = by_name[field]
             if not isinstance(prop, types.String):
-                data[field] = self._load(data[field])
+                data[field] = self._loads(data[field])
         self.validator.validate(data)
         return self._to_python(data)
 

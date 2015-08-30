@@ -14,14 +14,6 @@ class TestBase(unittest.TestCase):
 
         self.assertEqual(b.get_attr("attr"), 1)
 
-    def test_load(self):
-        b = base.Base()
-        with mock.patch.object(b, "validate_dict") as validate:
-            res = b.load('"Hello"')
-
-        self.assertEqual(res, "Hello")
-        validate.assert_called_with("Hello", context=None)
-
     def test_get_schema(self):
         with mock.patch.object(base.Base, "_type", new="string"):
             b = base.Base()
@@ -168,7 +160,7 @@ class TestSchema(unittest.TestCase):
                 }
             })
 
-    def test_load(self):
+    def test_deserialize(self):
         class MySchema(base.Schema):
             _schema = {
                 'type': 'object',
@@ -178,7 +170,7 @@ class TestSchema(unittest.TestCase):
             }
 
         s = MySchema()
-        res = s.load('{"num": 12}')
+        res = s.to_python({'num': 12})
         self.assertEqual(res, {'num': 12})
 
     def test_load_as_field(self):
@@ -194,5 +186,5 @@ class TestSchema(unittest.TestCase):
             code = MyType()
 
         s = MyObject()
-        res = s.load('{"code": {"num": 12}}')
+        res = s.to_python({'code': {'num': 12}})
         self.assertEqual(res, {'code': {'num': 12}})

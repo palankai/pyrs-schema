@@ -1,6 +1,5 @@
 import collections
 import datetime
-import json
 
 import jsonschema
 import six
@@ -58,14 +57,6 @@ class Schema(object):
         if set(self.get_tags()) & set(tags):
             return True
         return False
-
-    def load(self, value, context=None):
-        if isinstance(value, six.string_types):
-            obj = json.loads(value)
-            self.validate_dict(obj, context=context)
-            self._value = self.to_python(obj, context=context)
-            return self._value
-        raise ValueError('Unrecognised input format')
 
     def make_validator(self, context=None):
         return _make_validator(self.get_schema(context=context))
