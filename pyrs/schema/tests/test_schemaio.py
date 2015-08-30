@@ -200,7 +200,7 @@ class TestJSONWriter(unittest.TestCase):
 
     def test_write_schema(self):
         class MySchema(base.Schema):
-            _schema = {
+            _jsonschema = {
                 'type': 'object',
                 'properties': {
                     'num': {'type': 'integer'}
@@ -213,7 +213,7 @@ class TestJSONWriter(unittest.TestCase):
 
     def test_write_as_field(self):
         class MyType(base.Schema):
-            _schema = {
+            _jsonschema = {
                 'type': 'object',
                 'properties': {
                     'num': {'type': 'integer'}

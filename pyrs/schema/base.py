@@ -10,16 +10,15 @@ from . import formats
 
 class Schema(object):
     _creation_index = 0
-    _schema = None
     _attrs = None
 
-    def __init__(self, _schema=None, **attrs):
+    def __init__(self, _jsonschema=None, **attrs):
         self._creation_index = Schema._creation_index
         Schema._creation_index += 1
-        if _schema and self._schema:
+        if _jsonschema and hasattr(self, '_jsonschema'):
             raise AttributeError("The declared schema shouldn't be redefined")
-        if _schema:
-            self._schema = _schema
+        if _jsonschema:
+            self._jsonschema = _jsonschema
         if self.__class__._attrs is not None:
             self._attrs = self.__class__._attrs.copy()
         else:
@@ -45,8 +44,8 @@ class Schema(object):
             return False
         return True
 
-    def get_schema(self, context=None):
-        return self._schema
+    def get_jsonschema(self, context=None):
+        return self._jsonschema
 
     def get_tags(self):
         return self.get_attr('tags', set())
@@ -58,22 +57,14 @@ class Schema(object):
             return True
         return False
 
-    def make_validator(self, context=None):
-        return _make_validator(self.get_schema(context=context))
-
     def validate(self, obj, context=None):
-        self.validate_dict(self.to_raw(obj, context=context))
+        self.validate_dict(self.to_raw(obj, context=context), context=context)
 
     def validate_dict(self, obj, context=None):
         self.get_validator(context=context).validate(obj)
 
     def get_validator(self, context=None):
-        if context:
-            return self.make_validator(context=context)
-        if getattr(self, "_validator", None):
-            return self._validator
-        self._validator = self.make_validator(context=context)
-        return self._validator
+        return _make_validator(self.get_jsonschema(context=context))
 
     def to_raw(self, value, context=None):
         """Convert the value to a dict of primitives"""
@@ -85,9 +76,9 @@ class Schema(object):
 
     def __eq__(self, other):
         if isinstance(other, dict):
-            return self.get_schema() == other
+            return self.get_jsonschema() == other
         if isinstance(other, Schema):
-            return self.get_schema() == other.get_schema()
+            return self.get_jsonschema() == other.get_jsonschema()
         return id(self) == id(other)
 
     def invalidate(self, context=None):
@@ -153,18 +144,7 @@ class Base(Schema):
     _attrs = None
     _definitions = None
 
-    def __init__(self, **attrs):
-        super(Base, self).__init__(**attrs)
-
-    def get_schema(self, context=None):
-        if context:
-            self.make_schema(context=context)
-        if getattr(self, "_schema", None):
-            return self._schema
-        self._schema = self.make_schema(context=context)
-        return self._schema
-
-    def make_schema(self, context=None):
+    def get_jsonschema(self, context=None):
         schema = {"type": self._type}
         if self.get_attr("null"):
             schema["type"] = [self._type, "null"]
@@ -182,17 +162,12 @@ class Base(Schema):
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
                 definitions[prop.get_attr("name", name)] = \
-                    prop.get_schema(context=context)
+                    prop.get_jsonschema(context=context)
             schema["definitions"] = definitions
         return schema
 
     def get_name(self, default=None):
         return self.get_attr('name', default)
-
-    def invalidate(self, context=None):
-        super(Base, self).invalidate(context=None)
-        if hasattr(self, "_schema"):
-            self._schema = None
 
 
 def _types_msg(instance, types, hint=''):

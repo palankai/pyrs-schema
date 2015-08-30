@@ -15,7 +15,7 @@ class TestSchemaValidation(unittest.TestCase):
         t = MyObject(additional=None)
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -35,7 +35,7 @@ class TestSchemaValidation(unittest.TestCase):
         t = MyObject(additional=None)
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'object',
                 'description': "Description",
@@ -49,7 +49,7 @@ class TestSchemaValidation(unittest.TestCase):
             string = types.String(name="String", required=True)
 
         t = MyObject(additional=None)
-        s = t.get_schema()
+        s = t.get_jsonschema()
         expected = {
             "type": "object",
             "properties": {
@@ -79,7 +79,7 @@ class TestSchemaValidation(unittest.TestCase):
         t = MyObject(additional=None)
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -107,7 +107,7 @@ class TestSchemaValidation(unittest.TestCase):
         t = MyObject(additional=None)
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -141,7 +141,7 @@ class TestSchemaValidation(unittest.TestCase):
         t = MyObject(additional=None)
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -231,7 +231,7 @@ class TestSchemaAdditional(unittest.TestCase):
         t = MyObject()
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -275,7 +275,7 @@ class TestSchemaPattern(unittest.TestCase):
         t = MyObject()
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -321,14 +321,14 @@ class TestSchemaExtend(unittest.TestCase):
                 additional = False
 
         t = MyObject()
-        t.get_schema()
+        t.get_jsonschema()
         t.validate({'num': 12})
         t.extend({
             'title': types.String()
         })
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -351,7 +351,7 @@ class TestSchemaExtend(unittest.TestCase):
 
         t = MyObject(extend={'title': types.String()})
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -377,7 +377,7 @@ class TestSchemaInclude(unittest.TestCase):
 
         t = MyObject(include=['num'])
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -401,7 +401,7 @@ class TestSchemaExclude(unittest.TestCase):
 
         t = MyObject(exclude=['string'])
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -431,7 +431,7 @@ class TestSchemaTagFilter(unittest.TestCase):
         t = MyObject()
         c = {'exclude_tags': 'sensitive'}
         self.assertEqual(
-            t.get_schema(context=c),
+            t.get_jsonschema(context=c),
             {
                 "type": "object",
                 "properties": {
@@ -446,7 +446,7 @@ class TestSchemaTagFilter(unittest.TestCase):
                 'additionalProperties': False,
             }
         )
-        t.validate({'fullname': 'test'})
+        t.validate({'fullname': 'test'}, context=c)
 
     def test_context_exclude_initial(self):
         class SubSchema(types.Object):
@@ -463,7 +463,7 @@ class TestSchemaTagFilter(unittest.TestCase):
 
         t = MyObject(exclude_tags='sensitive')
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -497,7 +497,7 @@ class TestSchemaTagFilter(unittest.TestCase):
         t = MyObject(exclude_tags='sensitive')
         c = {'exclude_tags': 'readonly'}
         self.assertEqual(
-            t.get_schema(context=c),
+            t.get_jsonschema(context=c),
             {
                 "type": "object",
                 "properties": {

@@ -9,10 +9,10 @@ from .. import exceptions
 
 class TestString(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.String()
 
-        self.assertEqual(t.get_schema(), {"type": "string"})
+        self.assertEqual(t.get_jsonschema(), {"type": "string"})
 
     def test_validation_pattern(self):
         t = types.String(pattern=r".+")
@@ -24,14 +24,14 @@ class TestString(unittest.TestCase):
 
 class TestEnum(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.Enum()
 
-        self.assertEqual(t.get_schema(), {})
+        self.assertEqual(t.get_jsonschema(), {})
 
     def test_validation_enum(self):
         t = types.Enum(enum=["a", "b", 1, True])
-        self.assertEqual(t.get_schema(), {"enum": ["a", "b", 1, True]})
+        self.assertEqual(t.get_jsonschema(), {"enum": ["a", "b", 1, True]})
 
         t.validate("a")
         t.validate(1)
@@ -49,7 +49,7 @@ class TestInteger(unittest.TestCase):
     def test_schama(self):
         t = types.Integer()
 
-        self.assertEqual(t.get_schema(), {"type": "integer"})
+        self.assertEqual(t.get_jsonschema(), {"type": "integer"})
 
     def test_validation(self):
         t = types.Integer()
@@ -64,10 +64,10 @@ class TestInteger(unittest.TestCase):
 
 class TestNumber(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.Number()
 
-        self.assertEqual(t.get_schema(), {"type": "number"})
+        self.assertEqual(t.get_jsonschema(), {"type": "number"})
 
     def test_validation(self):
         t = types.Number()
@@ -81,10 +81,10 @@ class TestNumber(unittest.TestCase):
 
 class TestBoolean(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.Boolean()
 
-        self.assertEqual(t.get_schema(), {"type": "boolean"})
+        self.assertEqual(t.get_jsonschema(), {"type": "boolean"})
 
     def test_validation(self):
         t = types.Boolean()
@@ -98,10 +98,10 @@ class TestBoolean(unittest.TestCase):
 
 class TestArray(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.Array()
 
-        self.assertEqual(t.get_schema(), {"type": "array"})
+        self.assertEqual(t.get_jsonschema(), {"type": "array"})
 
     def test_validation(self):
         t = types.Array()
@@ -139,7 +139,7 @@ class TestArray(unittest.TestCase):
         t = types.Array(items=types.String(), additional=False)
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'array',
                 'items': {'type': 'string'},
@@ -154,7 +154,7 @@ class TestArray(unittest.TestCase):
         t = types.Array(items=[types.String()])
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'array',
                 'items': [{'type': 'string'}],
@@ -168,7 +168,7 @@ class TestArray(unittest.TestCase):
         t = types.Array(items=[types.String()], additional=False)
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'array',
                 'items': [{'type': 'string'}],

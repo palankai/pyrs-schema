@@ -41,8 +41,8 @@ class String(base.Base):
     """
     _type = "string"
 
-    def make_schema(self, context=None):
-        schema = super(String, self).make_schema(context=context)
+    def get_jsonschema(self, context=None):
+        schema = super(String, self).get_jsonschema(context=context)
         if self.has_attr('pattern', six.string_types):
             schema['pattern'] = self.get_attr('pattern')
         if self.has_attr('min_len', int):
@@ -85,8 +85,8 @@ class Number(base.Base):
     """
     _type = "number"
 
-    def make_schema(self, context=None):
-        schema = super(Number, self).make_schema(context=context)
+    def get_jsonschema(self, context=None):
+        schema = super(Number, self).get_jsonschema(context=context)
         if self.has_attr('multiple', int):
             schema['multipleOf'] = self.get_attr('multiple')
         if self.has_attr('maximum', int):
@@ -165,8 +165,8 @@ class Array(base.Base):
     """
     _type = "array"
 
-    def make_schema(self, context=None):
-        schema = super(Array, self).make_schema(context=context)
+    def get_jsonschema(self, context=None):
+        schema = super(Array, self).get_jsonschema(context=context)
         if self.get_attr('additional') is not None:
             schema['additionalItems'] = self.get_attr('additional')
         if self.get_attr('max_items') is not None:
@@ -178,12 +178,12 @@ class Array(base.Base):
         if self.get_attr('items'):
             if isinstance(self.get_attr('items'), (list, tuple)):
                 schema['items'] = [
-                    s.get_schema(context=context)
+                    s.get_jsonschema(context=context)
                     for s in self.get_attr('items')
                 ]
             else:
                 schema['items'] = \
-                    self.get_attr('items').get_schema(context=context)
+                    self.get_attr('items').get_jsonschema(context=context)
         return schema
 
 
@@ -233,14 +233,14 @@ class Object(base.Base):
         if extend:
             self._fields.update(extend)
 
-    def make_schema(self, context=None):
-        schema = super(Object, self).make_schema(context=context)
+    def get_jsonschema(self, context=None):
+        schema = super(Object, self).get_jsonschema(context=context)
         if self.get_attr('additional') is not None:
             if isinstance(self.get_attr('additional'), bool):
                 schema['additionalProperties'] = self.get_attr('additional')
             else:
                 schema['additionalProperties'] = \
-                    self.get_attr('additional').get_schema(context=context)
+                    self.get_attr('additional').get_jsonschema(context=context)
         if self.get_attr('min_properties') is not None:
             schema['minProperties'] = self.get_attr('min_properties')
         if self.get_attr('max_properties') is not None:
@@ -248,7 +248,7 @@ class Object(base.Base):
         if self.get_attr('patterns'):
             patterns = collections.OrderedDict()
             for reg, pattern in self.get_attr('patterns').items():
-                patterns[reg] = pattern.get_schema(context=context)
+                patterns[reg] = pattern.get_jsonschema(context=context)
             schema['patternProperties'] = patterns
         if context is None:
             context = {}
@@ -269,7 +269,7 @@ class Object(base.Base):
             if exclude_tags and prop.has_tags(exclude_tags):
                 continue
             name = prop.get_attr("name", key)
-            properties[name] = prop.get_schema(context=context)
+            properties[name] = prop.get_jsonschema(context=context)
             if prop.get_attr('required'):
                 required.append(name)
         schema["properties"] = properties
@@ -278,7 +278,7 @@ class Object(base.Base):
         return schema
 
     @property
-    def properties(self):
+    def fields(self):
         return self._fields
 
     def extend(self, properties, context=None):
@@ -501,13 +501,13 @@ class Enum(base.Base):
     :type enum: list
     """
 
-    def make_schema(self, context=None):
+    def get_jsonschema(self, context=None):
         """Ensure the generic schema, remove `types`
 
         :return: Gives back the schema
         :rtype: dict
         """
-        schema = super(Enum, self).make_schema(context=None)
+        schema = super(Enum, self).get_jsonschema(context=None)
         schema.pop("type")
         if self.get_attr("enum"):
             schema["enum"] = self.get_attr("enum")
@@ -516,8 +516,8 @@ class Enum(base.Base):
 
 class Ref(base.Base):
 
-    def make_schema(self, context=None):
-        schema = super(Ref, self).make_schema(context=context)
+    def get_jsonschema(self, context=None):
+        schema = super(Ref, self).get_jsonschema(context=context)
         schema.pop("type")
         assert not schema
         return {"$ref": "#/definitions/"+self.get_attr("ref")}

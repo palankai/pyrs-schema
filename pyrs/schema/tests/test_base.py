@@ -14,10 +14,10 @@ class TestBase(unittest.TestCase):
 
         self.assertEqual(b.get_attr("attr"), 1)
 
-    def test_get_schema(self):
+    def test_get_jsonschema(self):
         with mock.patch.object(base.Base, "_type", new="string"):
             b = base.Base()
-            s = b.get_schema()
+            s = b.get_jsonschema()
             self.assertEqual(s, {"type": "string"})
         self.assertIsNone(base.Base._type)
 
@@ -50,7 +50,7 @@ class TestBase(unittest.TestCase):
             _attrs = {"null": True}
         t = MyType()
 
-        self.assertEqual(t.get_schema(), {"type": ["string", "null"]})
+        self.assertEqual(t.get_jsonschema(), {"type": ["string", "null"]})
 
     def test_title_description(self):
         class MyType(base.Base):
@@ -58,7 +58,7 @@ class TestBase(unittest.TestCase):
         t = MyType(title="t", description='d')
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {"type": "string", "title": "t", "description": 'd'}
         )
 
@@ -72,7 +72,7 @@ class TestBase(unittest.TestCase):
         t = MyType()
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {"type": "string", "title": "t", "description": 'd'}
         )
 
@@ -88,7 +88,7 @@ class TestDeclarativeBase(unittest.TestCase):
 
         t = MyType()
 
-        self.assertEqual(t.get_schema(), {"type": ["string", "null"]})
+        self.assertEqual(t.get_jsonschema(), {"type": ["string", "null"]})
 
 
 class TestDefault(unittest.TestCase):
@@ -99,7 +99,7 @@ class TestDefault(unittest.TestCase):
 
         t = MySchema(additional=None)
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'object',
                 'properties': {
@@ -125,7 +125,7 @@ class TestSchema(unittest.TestCase):
 
     def test_validation(self):
         class MySchema(base.Schema):
-            _schema = {
+            _jsonschema = {
                 'type': 'object',
                 'properties': {
                     'num': {'type': 'integer'}
@@ -150,7 +150,7 @@ class TestSchema(unittest.TestCase):
 
     def test_redeclaration_raise_error(self):
         class MySchema(base.Schema):
-            _schema = {'type': 'string'}
+            _jsonschema = {'type': 'string'}
 
         with self.assertRaises(AttributeError):
             MySchema({

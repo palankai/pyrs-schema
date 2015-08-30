@@ -106,7 +106,7 @@ class JSONSchemaWriter(SchemaWriter):
         return json.dumps(self.extract(context=context))
 
     def extract(self, context=None):
-        return self.schema.get_schema(context=context)
+        return self.schema.get_jsonschema(context=context)
 
 
 class JSONSchemaValidator(Validator):
@@ -123,7 +123,7 @@ class JSONSchemaValidator(Validator):
 
     def _make_validator(self):
         self.validator = base._make_validator(
-            self.schema.get_schema(context=self.context)
+            self.schema.get_jsonschema(context=self.context)
         )
 
     def _update_errors_with_exception(self, errors, ex, path_prefix=None):
@@ -154,7 +154,7 @@ class JSONSchemaDictValidator(JSONSchemaValidator):
         self.validators = {}
         for field, item in self.schema.items():
             self.validators[field] = base._make_validator(
-                item.get_schema(context=self.context)
+                item.get_jsonschema(context=self.context)
             )
 
     def validate(self, data):
@@ -254,7 +254,7 @@ class JSONFormReader(JSONReader):
         self._validate_format(data)
         data = data.copy()
         by_name = {}
-        for field, prop in self.schema.properties.items():
+        for field, prop in self.schema.fields.items():
             by_name[prop.get_attr('name', field)] = prop
         for field in list(set(data) & set(by_name)):
             prop = by_name[field]
