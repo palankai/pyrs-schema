@@ -33,43 +33,75 @@ class SchemaIO(object):
 
 class SchemaWriter(SchemaIO):
     """
-    Writing schema
+    Abstract implementation of schema writer. The main purpose of this class
+    to ensure different useage of the schema. Add extra value if it's
+    necessary which can't be implemented by the schema itself.
+    """
+
+    def write(self):
+        raise NotImplementedError(
+            'The write method of SchemaWriter is abstract'
+        )
+
+
+class Writer(SchemaIO):
+    """
+    Writer abstract class
+    At least the `write` method should be implemented
+
     .. code:: python
 
-        sw = SchemaWriter(CustomSchema())
+        sw = Writer(CustomSchema())
         encoded_data = sw.write({'custom': 'value'})
     """
 
     def write(self, data):
         """
-        With `self.get_schema()` select the proper schema, encode the given
+        With `self.schema` select the proper schema, encode the given
         data then gives it back.
         """
-        return self.schema.dump(data)
+        raise NotImplementedError(
+            'The write method of Writer is abstract'
+        )
 
 
-class SchemaReader(SchemaIO):
+class Reader(SchemaIO):
     """
-    Reading value based on schema
+    Reader abstract class
+    At least the `read` method should be implemented
+
     .. code:: python
 
-        sw = SchemaReader(CustomSchema())
+        sw = Reader(CustomSchema())
         data = sw.write(<custom datastructure>)
     """
 
     def read(self, data):
         """
-        with `self.get_schema()` select the proper schema and read the data,
+        with `self.schema` select the proper schema and read the data,
         validate the input and gives back the decoded value
         """
-        return self.schema.load(data)
+        raise NotImplementedError(
+            'The read method of Reader is abstract'
+        )
 
 
-class JSONWriter(SchemaWriter):
-    pass
+class JSONSchemaWriter(SchemaWriter):
+
+    def write(self, context=None):
+        return self.schema.get_schema(context=context)
+
+    def dump(self, context=None):
+        return json.dumps(self.write(context=context))
 
 
-class JSONReader(SchemaReader):
+class JSONWriter(Writer):
+
+    def write(self, data):
+        return self.schema.dump(data)
+
+
+class JSONReader(Reader):
 
     def read(self, data):
         self._validate_format(data)

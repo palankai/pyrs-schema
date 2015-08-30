@@ -20,16 +20,45 @@ class TestSchemaWriter(unittest.TestCase):
         t1 = types.String()
         io = schemaio.SchemaWriter(t1)
 
-        self.assertEqual(io.write('test'), '"test"')
+        with self.assertRaises(NotImplementedError):
+            io.write()
 
 
-class TestSchemaReader(unittest.TestCase):
+class TestWriter(unittest.TestCase):
 
     def test_write(self):
         t1 = types.String()
-        io = schemaio.SchemaReader(t1)
+        io = schemaio.Writer(t1)
 
-        self.assertEqual(io.read('"test"'), 'test')
+        with self.assertRaises(NotImplementedError):
+            io.write('test')
+
+
+class TestReader(unittest.TestCase):
+
+    def test_read(self):
+        t1 = types.String()
+        io = schemaio.Reader(t1)
+
+        with self.assertRaises(NotImplementedError):
+            io.read('"test"')
+
+
+class TestJSONSchemaWriter(unittest.TestCase):
+
+    def test_write(self):
+        t1 = types.String()
+        io = schemaio.JSONSchemaWriter(t1)
+
+        s = io.write()
+        self.assertEqual(s, {'type': 'string'})
+
+    def test_dump(self):
+        t1 = types.String()
+        io = schemaio.JSONSchemaWriter(t1)
+
+        s = io.dump()
+        self.assertEqual(s, '{"type": "string"}')
 
 
 class TestJSONWriter(unittest.TestCase):
