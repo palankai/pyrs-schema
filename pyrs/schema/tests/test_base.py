@@ -22,14 +22,6 @@ class TestBase(unittest.TestCase):
         self.assertEqual(res, "Hello")
         validate.assert_called_with("Hello", context=None)
 
-    def test_dump(self):
-        b = base.Base()
-        with mock.patch.object(b, "validate_dict") as validate:
-            res = b.dump("Hello")
-
-        self.assertEqual(res, '"Hello"')
-        validate.assert_called_with("Hello", context=None)
-
     def test_get_schema(self):
         with mock.patch.object(base.Base, "_type", new="string"):
             b = base.Base()
@@ -188,35 +180,6 @@ class TestSchema(unittest.TestCase):
         s = MySchema()
         res = s.load('{"num": 12}')
         self.assertEqual(res, {'num': 12})
-
-    def test_dump(self):
-        class MySchema(base.Schema):
-            _schema = {
-                'type': 'object',
-                'properties': {
-                    'num': {'type': 'integer'}
-                }
-            }
-
-        s = MySchema()
-        res = s.dump({'num': 12})
-        self.assertEqual(res, '{"num": 12}')
-
-    def test_dump_as_field(self):
-        class MyType(base.Schema):
-            _schema = {
-                'type': 'object',
-                'properties': {
-                    'num': {'type': 'integer'}
-                }
-            }
-
-        class MyObject(types.Object):
-            code = MyType()
-
-        s = MyObject()
-        res = s.dump({'code': {'num': 12}})
-        self.assertEqual(res, '{"code": {"num": 12}}')
 
     def test_load_as_field(self):
         class MyType(base.Schema):

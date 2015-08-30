@@ -1,5 +1,6 @@
 import unittest
 
+from .. import base
 from .. import exceptions
 from .. import schemaio
 from .. import types
@@ -196,6 +197,36 @@ class TestJSONWriter(unittest.TestCase):
         io = schemaio.JSONWriter(t1)
 
         self.assertEqual(io.write('test'), '"test"')
+
+    def test_write_schema(self):
+        class MySchema(base.Schema):
+            _schema = {
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            }
+
+        io = schemaio.JSONWriter(MySchema())
+        res = io.write({'num': 12})
+        self.assertEqual(res, '{"num": 12}')
+
+    def test_write_as_field(self):
+        class MyType(base.Schema):
+            _schema = {
+                'type': 'object',
+                'properties': {
+                    'num': {'type': 'integer'}
+                }
+            }
+
+        class MyObject(types.Object):
+            code = MyType()
+
+        io = schemaio.JSONWriter(MyObject())
+
+        res = io.write({'code': {'num': 12}})
+        self.assertEqual(res, '{"code": {"num": 12}}')
 
 
 class TestJSONReader(unittest.TestCase):

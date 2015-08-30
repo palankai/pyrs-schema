@@ -1,9 +1,7 @@
 import collections
 import datetime
-import functools
 import json
 
-import isodate
 import jsonschema
 import six
 
@@ -68,27 +66,6 @@ class Schema(object):
             self._value = self.to_python(obj, context=context)
             return self._value
         raise ValueError('Unrecognised input format')
-
-    def dump(self, obj, context=None):
-        obj = self.to_raw(obj, context=context)
-        self.validate_dict(obj, context=context)
-        return self._dump(obj, context=context)
-
-    def _dump(self, obj, context=None):
-        default = functools.partial(self._dump_default, context=context)
-        return json.dumps(obj, default=default)
-
-    def _dump_default(self, obj, context=None):
-        if isinstance(obj, datetime.datetime):
-            return isodate.datetime_isoformat(obj)
-        elif isinstance(obj, datetime.date):
-            return isodate.date_isoformat(obj)
-        elif isinstance(obj, datetime.time):
-            return isodate.time_isoformat(obj)
-        elif isinstance(obj, datetime.timedelta):
-            return obj.total_seconds()
-        else:
-            raise TypeError(obj)
 
     def make_validator(self, context=None):
         return _make_validator(self.get_schema(context=context))

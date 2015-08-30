@@ -1,5 +1,4 @@
 import datetime
-import json
 import unittest
 
 import jsonschema
@@ -195,8 +194,8 @@ class TestDate(unittest.TestCase):
 
     def test_serialize(self):
         t = types.Date()
-        v = t.dump(datetime.date(2012, 12, 24))
-        self.assertEqual(v, '"2012-12-24"')
+        v = t.to_raw(datetime.date(2012, 12, 24))
+        self.assertEqual(v, '2012-12-24')
 
     def test_loads(self):
         t = types.Date()
@@ -209,7 +208,7 @@ class TestDate(unittest.TestCase):
             date = types.Date()
         t = MySchema()
         t.validate({"date": datetime.date(2012, 12, 24)})
-        t.dump({"date": datetime.date(2012, 12, 24)})
+        t.to_raw({"date": datetime.date(2012, 12, 24)})
 
 
 class TestDuration(unittest.TestCase):
@@ -224,8 +223,8 @@ class TestDuration(unittest.TestCase):
 
     def test_serialize(self):
         t = types.Duration()
-        v = t.dump(datetime.timedelta(seconds=12))
-        self.assertEqual(v, '"PT12S"')
+        v = t.to_raw(datetime.timedelta(seconds=12))
+        self.assertEqual(v, 'PT12S')
 
     def test_loads(self):
         t = types.Duration()
@@ -244,7 +243,7 @@ class TestDuration(unittest.TestCase):
             duration = types.Duration()
         t = MySchema()
         t.validate({"duration": datetime.timedelta(seconds=12)})
-        t.dump({"duration": datetime.timedelta(seconds=12)})
+        t.to_raw({"duration": datetime.timedelta(seconds=12)})
 
 
 class TestObject(unittest.TestCase):
@@ -255,9 +254,9 @@ class TestObject(unittest.TestCase):
             password = types.String()
 
         data = {'username': 'admin', 'password': 'secret', 'pk': 1}
-        dumped = MySchema(additional=None).dump(data)
+        raw = MySchema(additional=None).to_raw(data)
         self.assertEqual(
-            json.loads(dumped),
+            raw,
             {'username': 'admin', 'password': 'secret', 'pk': 1}
         )
         self.assertEqual(
