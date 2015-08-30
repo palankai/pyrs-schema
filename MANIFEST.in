@@ -1,6 +1,5 @@
 include requirements.txt
-include requirements-docs.txt
-include requirements-tests.txt
-
-recursive-include docs *
-prune docs/_build
+include README.rst
+include LICENSE
+recursive-exclude docs *
+global-exclude tests/
