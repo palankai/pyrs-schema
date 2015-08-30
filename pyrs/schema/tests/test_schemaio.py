@@ -67,7 +67,7 @@ class TestJSONReader(unittest.TestCase):
         t1 = types.String()
         io = schemaio.JSONReader(t1)
 
-        with self.assertRaises(exceptions.ValidationError) as ctx:
+        with self.assertRaises(exceptions.ValidationErrors) as ctx:
             io.read('12')
         ex = ctx.exception
 
@@ -86,7 +86,7 @@ class TestJSONReader(unittest.TestCase):
             s2 = types.String()
         io = schemaio.JSONReader(MyObject)
 
-        with self.assertRaises(exceptions.ValidationError) as ctx:
+        with self.assertRaises(exceptions.ValidationErrors) as ctx:
             io.read('{"s1": 12, "s2": 13}')
         ex = ctx.exception
 
@@ -109,7 +109,7 @@ class TestJSONReader(unittest.TestCase):
 
         io = schemaio.JSONReader(MyObject)
 
-        with self.assertRaises(exceptions.ValidationError) as ctx:
+        with self.assertRaises(exceptions.ValidationErrors) as ctx:
             io.read('{"o1": {"o2": {"s1": 12, "s2": "z"}}}')
         ex = ctx.exception
         errors = sorted(ex.errors, key=lambda v: v['invalid'])

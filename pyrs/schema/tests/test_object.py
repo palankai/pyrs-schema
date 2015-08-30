@@ -177,7 +177,7 @@ class TestSchemaToPython(unittest.TestCase):
     def test_special_type(self):
 
         class Spec(types.String):
-            def to_python(self, src, context=None):
+            def to_python(self, src, path='', context=None):
                 if src.lower() == "yes":
                     return True
                 else:

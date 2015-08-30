@@ -111,7 +111,7 @@ class Schema(object):
         """Convert the value to a dict of primitives"""
         return value
 
-    def to_python(self, value, context=None):
+    def to_python(self, value, path='', context=None):
         """Convert the value to a real python object"""
         return value
 

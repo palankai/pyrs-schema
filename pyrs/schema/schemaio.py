@@ -98,15 +98,16 @@ class JSONReader(SchemaReader):
         errors = []
         for e in validator.iter_errors(value):
             errors.append({
+                'error': 'ValidationError',
                 'message': e.message,
-                'path': ".".join(e.path),
                 'value': e.instance,
-                'invalid': e.schema_path[-1] if e.schema_path else None,
+                'invalid': e.schema_path[-1],
                 'against': e.validator_value,
+                'path': ".".join(e.path),
             })
         if errors:
-            raise exceptions.ValidationError(
-                'Validation raised %s error(s)' % len(errors),
+            raise exceptions.ValidationErrors(
+                '%s validation error(s) raised' % len(errors),
                 value=value,
                 errors=errors
             )

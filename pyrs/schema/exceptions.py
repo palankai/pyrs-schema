@@ -29,16 +29,33 @@ class ParseError(SchemaError):
         super(ParseError, self).__init__(message, value, error)
 
 
-class ValidationError(SchemaError):
+class ValidationErrors(SchemaError):
     """
     Cover the validation errors.
     """
-    def __init__(
-            self, message, value, errors=None, error='ValidationError',
-            path=None, invalid=None, against=None
-    ):
-        super(ValidationError, self).__init__(message, value, error)
-        self.errors = errors
-        self.path = path
+    def __init__(self, message, value, errors=None):
+        super(ValidationErrors, self).__init__(
+            message, value, error='ValidationError'
+        )
+        self.errors = errors or []
+
+
+class ValidationError(ValidationErrors):
+    """
+    Cover a single validation error
+    """
+    def __init__(self, message, value, invalid, against, path=None):
+        errors = [{
+            'error': 'ValidationError',
+            'message': message,
+            'value': value,
+            'invalid': invalid,
+            'against': against,
+            'path': path or '',
+        }]
+        super(ValidationError, self).__init__(
+            message, value, errors=errors
+        )
         self.invalid = invalid
         self.against = against
+        self.path = path

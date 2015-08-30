@@ -8,6 +8,7 @@ import isodate
 import six
 
 from . import base
+from . import exceptions
 from . import formats
 from . import lib
 
@@ -310,12 +311,26 @@ class Object(base.Base):
         """Convert the value to a real python object"""
         value = value.copy()
         res = {}
+        errors = []
         for field, schema in self._fields.items():
             name = schema.get_attr('name', field)
             if name in value:
-                res[field] = schema.to_python(
-                    value.pop(name), context=context
-                )
+                try:
+                    res[field] = schema.to_python(
+                        value.pop(name),
+                        context=context
+                    )
+                except exceptions.ValidationErrors as ex:
+                    for error in ex.errors:
+                        if error['path']:
+                            error['path'] = name+'.'+error['path']
+                        errors.append(error)
+        if errors:
+            raise exceptions.ValidationErrors(
+                '%s validation error(s) raised' % len(errors),
+                value=value,
+                errors=errors
+            )
         res.update(value)
         return res
 
@@ -342,7 +357,12 @@ class Date(String):
         try:
             return isodate.parse_date(value)
         except isodate.ISO8601Error:
-            raise ValueError("Invalid date '%s'" % value)
+            raise exceptions.ValidationError(
+                "Invalid date value '%s'" % value,
+                value=value,
+                invalid='format',
+                against='date'
+            )
 
     def to_dict(self, value, context=None):
         if isinstance(value, datetime.date):
@@ -361,7 +381,12 @@ class Time(String):
         try:
             return isodate.parse_time(value)
         except isodate.ISO8601Error:
-            raise ValueError("Invalid time '%s'" % value)
+            raise exceptions.ValidationError(
+                "Invalid time value '%s'" % value,
+                value=value,
+                invalid='format',
+                against='time'
+            )
 
     def to_dict(self, value, context=None):
         if isinstance(value, datetime.time):
@@ -380,7 +405,12 @@ class DateTime(String):
         try:
             return formats.parse_datetime(value)
         except isodate.ISO8601Error:
-            raise ValueError("Invalid datetime '%s'" % value)
+            raise exceptions.ValidationError(
+                "Invalid datetime value '%s'" % value,
+                value=value,
+                invalid='format',
+                against='datetime'
+            )
 
     def to_dict(self, value, context=None):
         if isinstance(value, datetime.time):
@@ -399,7 +429,12 @@ class Duration(String):
         try:
             return isodate.parse_duration(value)
         except isodate.ISO8601Error:
-            raise ValueError("Invalid duration '%s'" % value)
+            raise exceptions.ValidationError(
+                "Invalid duration value '%s'" % value,
+                value=value,
+                invalid='format',
+                against='duration'
+            )
 
     def to_dict(self, value, context=None):
         if isinstance(value, datetime.timedelta):
@@ -420,7 +455,12 @@ class TimeDelta(Number):
             return datetime.timedelta(seconds=value)
         if isinstance(value, datetime.timedelta):
             return value
-        raise ValueError("Invalid type of timedelta '%s'" % type(value))
+        raise exceptions.ValidationError(
+            "Invalid timedelta value '%s'" % value,
+            value=value,
+            invalid='type',
+            against='timedelta'
+        )
 
     def to_dict(self, value, context=None):
         if isinstance(value, datetime.timedelta):
