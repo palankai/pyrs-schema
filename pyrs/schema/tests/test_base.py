@@ -1,10 +1,8 @@
 import unittest
 
-import jsonschema
 import mock
 
 from .. import base
-from .. import exceptions
 from .. import types
 
 
@@ -13,61 +11,34 @@ class TestBase(unittest.TestCase):
     def test_attrs(self):
         b = base.Base(attr=1)
 
-        self.assertEqual(b.get_attr("attr"), 1)
+        self.assertEqual(b.get_attr('attr'), 1)
 
-    def test_load(self):
-        b = base.Base()
-        with mock.patch.object(b, "validate_dict") as validate:
-            res = b.load('"Hello"')
-
-        self.assertEqual(res, "Hello")
-        validate.assert_called_with("Hello", context=None)
-
-    def test_dump(self):
-        b = base.Base()
-        with mock.patch.object(b, "validate_dict") as validate:
-            res = b.dump("Hello")
-
-        self.assertEqual(res, '"Hello"')
-        validate.assert_called_with("Hello", context=None)
-
-    def test_get_schema(self):
-        with mock.patch.object(base.Base, "_type", new="string"):
+    def test_get_jsonschema(self):
+        with mock.patch.object(base.Base, '_type', new='string'):
             b = base.Base()
-            s = b.get_schema()
-            self.assertEqual(s, {"type": "string"})
+            s = b.get_jsonschema()
+            self.assertEqual(s, {'type': 'string'})
         self.assertIsNone(base.Base._type)
 
-    def test_validation(self):
-        with mock.patch.object(base.Base, "_type", new="string"):
-            b = base.Base()
-            b.validate("Hello")
-            with self.assertRaises(jsonschema.exceptions.ValidationError):
-                b.validate(None)
-            with self.assertRaises(jsonschema.exceptions.ValidationError):
-                b.validate({"string": 1})
-
-    def test_null_validation(self):
-        with mock.patch.object(base.Base, "_type", new="string"):
+    def test_null(self):
+        with mock.patch.object(base.Base, '_type', new='string'):
             b = base.Base(null=True)
-            b.validate("Hello")
-            b.validate(None)
+            self.assertEqual(b.get_jsonschema(), {'type': ['string', 'null']})
 
     def test_enum_validation(self):
-        with mock.patch.object(base.Base, "_type", new="string"):
-            b = base.Base(enum=["a", "b", "c"])
-
-            b.validate("a")
-            with self.assertRaises(jsonschema.exceptions.ValidationError):
-                b.validate("Hello")
+        with mock.patch.object(base.Base, '_type', new='string'):
+            b = base.Base(enum=['a', 'b', 'c'])
+            self.assertEqual(
+                b.get_jsonschema(), {'type': 'string', 'enum': ['a', 'b', 'c']}
+            )
 
     def test_default_attrs(self):
         class MyType(base.Base):
-            _type = "string"
-            _attrs = {"null": True}
+            _type = 'string'
+            _attrs = {'null': True}
         t = MyType()
 
-        self.assertEqual(t.get_schema(), {"type": ["string", "null"]})
+        self.assertEqual(t.get_jsonschema(), {'type': ['string', 'null']})
 
     def test_title_description(self):
         class MyType(base.Base):
@@ -75,7 +46,7 @@ class TestBase(unittest.TestCase):
         t = MyType(title="t", description='d')
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {"type": "string", "title": "t", "description": 'd'}
         )
 
@@ -89,7 +60,7 @@ class TestBase(unittest.TestCase):
         t = MyType()
 
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {"type": "string", "title": "t", "description": 'd'}
         )
 
@@ -105,7 +76,7 @@ class TestDeclarativeBase(unittest.TestCase):
 
         t = MyType()
 
-        self.assertEqual(t.get_schema(), {"type": ["string", "null"]})
+        self.assertEqual(t.get_jsonschema(), {"type": ["string", "null"]})
 
 
 class TestDefault(unittest.TestCase):
@@ -116,7 +87,7 @@ class TestDefault(unittest.TestCase):
 
         t = MySchema(additional=None)
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'object',
                 'properties': {
@@ -140,9 +111,9 @@ class TestSchema(unittest.TestCase):
         self.assertEqual(b2._creation_index, 2)
         self.assertEqual(base.Base._creation_index, 3)
 
-    def test_validation(self):
+    def test_declarative(self):
         class MySchema(base.Schema):
-            _schema = {
+            _jsonschema = {
                 'type': 'object',
                 'properties': {
                     'num': {'type': 'integer'}
@@ -150,24 +121,30 @@ class TestSchema(unittest.TestCase):
             }
 
         s = MySchema()
-        s.validate({'num': 12})
-        with self.assertRaises(exceptions.ValidationError):
-            s.validate({'num': 12.1})
+        self.assertEqual(s.get_jsonschema(), {
+            'type': 'object',
+            'properties': {
+                'num': {'type': 'integer'}
+            }
+        })
 
-    def test_validation_inline(self):
+    def test_inline(self):
         s = base.Schema({
             'type': 'object',
             'properties': {
                 'num': {'type': 'integer'}
             }
         })
-        s.validate({'num': 12})
-        with self.assertRaises(exceptions.ValidationError):
-            s.validate({'num': 12.1})
+        self.assertEqual(s.get_jsonschema(), {
+            'type': 'object',
+            'properties': {
+                'num': {'type': 'integer'}
+            }
+        })
 
     def test_redeclaration_raise_error(self):
         class MySchema(base.Schema):
-            _schema = {'type': 'string'}
+            _jsonschema = {'type': 'string'}
 
         with self.assertRaises(AttributeError):
             MySchema({
@@ -177,7 +154,7 @@ class TestSchema(unittest.TestCase):
                 }
             })
 
-    def test_load(self):
+    def test_deserialize(self):
         class MySchema(base.Schema):
             _schema = {
                 'type': 'object',
@@ -187,37 +164,8 @@ class TestSchema(unittest.TestCase):
             }
 
         s = MySchema()
-        res = s.load('{"num": 12}')
+        res = s.to_python({'num': 12})
         self.assertEqual(res, {'num': 12})
-
-    def test_dump(self):
-        class MySchema(base.Schema):
-            _schema = {
-                'type': 'object',
-                'properties': {
-                    'num': {'type': 'integer'}
-                }
-            }
-
-        s = MySchema()
-        res = s.dump({'num': 12})
-        self.assertEqual(res, '{"num": 12}')
-
-    def test_dump_as_field(self):
-        class MyType(base.Schema):
-            _schema = {
-                'type': 'object',
-                'properties': {
-                    'num': {'type': 'integer'}
-                }
-            }
-
-        class MyObject(types.Object):
-            code = MyType()
-
-        s = MyObject()
-        res = s.dump({'code': {'num': 12}})
-        self.assertEqual(res, '{"code": {"num": 12}}')
 
     def test_load_as_field(self):
         class MyType(base.Schema):
@@ -232,5 +180,5 @@ class TestSchema(unittest.TestCase):
             code = MyType()
 
         s = MyObject()
-        res = s.load('{"code": {"num": 12}}')
+        res = s.to_python({'code': {'num': 12}})
         self.assertEqual(res, {'code': {'num': 12}})

@@ -1,47 +1,82 @@
 import datetime
-import json
 import unittest
 
-import jsonschema
-
+from .. import exceptions
 from .. import types
 
 
 class TestString(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.String()
 
-        self.assertEqual(t.get_schema(), {"type": "string"})
+        self.assertEqual(t.get_jsonschema(), {'type': 'string'})
 
-    def test_validation_pattern(self):
-        t = types.String(pattern=r".+")
+    def test_set_extra(self):
+        t = types.String(pattern=r'.+', min_len=2, max_len=4)
+        self.assertEqual(
+            t.get_jsonschema(),
+            {'type': 'string', 'pattern': '.+', 'minLength': 2, 'maxLength': 4}
+        )
 
-        t.validate("valid")
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate("")
+    def test_blank(self):
+        t = types.String(blank=False)
+        self.assertEqual(
+            t.get_jsonschema(),
+            {'type': 'string', 'minLength': 1}
+        )
+
+    def test_blank_with_min_len(self):
+        t = types.String(min_len=2, blank=False)
+        self.assertEqual(
+            t.get_jsonschema(),
+            {'type': 'string', 'minLength': 2}
+        )
+
+    def test_blank_with_zero_min_len(self):
+        t = types.String(min_len=0, blank=False)
+        self.assertEqual(
+            t.get_jsonschema(),
+            {'type': 'string', 'minLength': 1}
+        )
 
 
 class TestEnum(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.Enum()
 
-        self.assertEqual(t.get_schema(), {})
+        self.assertEqual(t.get_jsonschema(), {})
 
-    def test_validation_enum(self):
-        t = types.Enum(enum=["a", "b", 1, True])
-        self.assertEqual(t.get_schema(), {"enum": ["a", "b", 1, True]})
+    def test_enum_set(self):
+        t = types.Enum(enum=['a', 'b', 1, True])
+        self.assertEqual(t.get_jsonschema(), {'enum': ['a', 'b', 1, True]})
 
-        t.validate("a")
-        t.validate(1)
-        t.validate(True)
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate("c")
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate(2)
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate(False)
+
+class TestNumber(unittest.TestCase):
+
+    def test_jsonschema(self):
+        t = types.Number()
+
+        self.assertEqual(t.get_jsonschema(), {'type': 'number'})
+
+    def test_with_extra_args(self):
+        t = types.Number(
+            multiple=2,
+            minimum=4, exclusive_min=True,
+            maximum=256, exclusive_max=True
+        )
+        self.assertEqual(
+            t.get_jsonschema(),
+            {
+                'type': 'number',
+                'multipleOf': 2,
+                'minimum': 4,
+                'exclusiveMinimum': True,
+                'maximum': 256,
+                'exclusiveMaximum': True
+            }
+        )
 
 
 class TestInteger(unittest.TestCase):
@@ -49,201 +84,284 @@ class TestInteger(unittest.TestCase):
     def test_schama(self):
         t = types.Integer()
 
-        self.assertEqual(t.get_schema(), {"type": "integer"})
+        self.assertEqual(t.get_jsonschema(), {'type': 'integer'})
 
-    def test_validation(self):
-        t = types.Integer()
-
-        t.validate(12)
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate(12.22)
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate("Hello")
-
-
-class TestNumber(unittest.TestCase):
-
-    def test_schema(self):
-        t = types.Number()
-
-        self.assertEqual(t.get_schema(), {"type": "number"})
-
-    def test_validation(self):
-        t = types.Number()
-
-        t.validate(12)
-        t.validate(12.22)
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate("Hello")
+    def test_with_extra_args(self):
+        t = types.Integer(
+            multiple=2,
+            minimum=4, exclusive_min=True,
+            maximum=256, exclusive_max=True
+        )
+        self.assertEqual(
+            t.get_jsonschema(),
+            {
+                'type': 'integer',
+                'multipleOf': 2,
+                'minimum': 4,
+                'exclusiveMinimum': True,
+                'maximum': 256,
+                'exclusiveMaximum': True
+            }
+        )
 
 
 class TestBoolean(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.Boolean()
 
-        self.assertEqual(t.get_schema(), {"type": "boolean"})
-
-    def test_validation(self):
-        t = types.Boolean()
-
-        t.validate(True)
-        t.validate(False)
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate("Hello")
+        self.assertEqual(t.get_jsonschema(), {'type': 'boolean'})
 
 
 class TestArray(unittest.TestCase):
 
-    def test_schema(self):
+    def test_jsonschema(self):
         t = types.Array()
 
-        self.assertEqual(t.get_schema(), {"type": "array"})
+        self.assertEqual(t.get_jsonschema(), {'type': 'array'})
 
-    def test_validation(self):
-        t = types.Array()
-        t.validate([])
-        t.validate([1, 2, 3])
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate("Hello")
-
-    def test_validation_unique_items(self):
-        t = types.Array(unique_items=True)
-        t.validate([])
-        t.validate([1, 2, 3])
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate([1, 2, 2])
-
-    def test_validation_min_max_items(self):
-        t = types.Array(min_items=2, max_items=4)
-        t.validate([1, 2, 3])
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate("Hello")
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate([])
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate([1])
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate([1, 2, 3, 4, 5])
-
-    def test_schema_with_items(self):
-        t = types.Array(items=types.String(), additional=False)
-
+    def test_with_extra_args(self):
+        t = types.Array(
+            additional=True, min_items=2, max_items=5, unique_items=True,
+            items=types.String()
+        )
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'array',
-                'items': {'type': 'string'},
-                'additionalItems': False
+                'additionalItems': True,
+                'minItems': 2,
+                'maxItems': 5,
+                'uniqueItems': True,
+                'items': {'type': 'string'}
             }
         )
-        t.validate(['1', '2', '3'])
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate([1, 2, 3])
 
-    def test_schema_with_items_list(self):
-        t = types.Array(items=[types.String()])
-
+    def test_list_of_items(self):
+        t = types.Array(
+            items=[types.String(), types.Integer()]
+        )
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'array',
-                'items': [{'type': 'string'}],
+                'items': [{'type': 'string'}, {'type': 'integer'}]
             }
         )
-        t.validate(['1', '2', '3'])
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate([1, 2, 3])
 
-    def test_schema_with_items_list_strict(self):
-        t = types.Array(items=[types.String()], additional=False)
-
+    def test_type_additional(self):
+        t = types.Array(
+            additional=types.String()
+        )
         self.assertEqual(
-            t.get_schema(),
+            t.get_jsonschema(),
             {
                 'type': 'array',
-                'items': [{'type': 'string'}],
-                'additionalItems': False
+                'additionalItems': {'type': 'string'}
             }
         )
-        t.validate(['1'])
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate(['1', '2', '3'])
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate([1, 2, 3])
 
 
 class TestDate(unittest.TestCase):
 
-    def test_validation(self):
-        t = types.Date()
+    def setUp(self):
+        self.schema = types.Date()
 
-        t.validate(datetime.date(2012, 12, 24))
-        t.validate("2012-12-24")
-        with self.assertRaises(ValueError):
-            t.validate('crappy')
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(), {'type': 'string', 'format': 'date'}
+        )
 
-    def test_serialize(self):
-        t = types.Date()
-        v = t.dump(datetime.date(2012, 12, 24))
-        self.assertEqual(v, '"2012-12-24"')
-
-    def test_loads(self):
-        t = types.Date()
-
-        v = t.load('"2012-12-24"')
+    def test_to_python_string(self):
+        v = self.schema.to_python('2012-12-24')
         self.assertEqual(v, datetime.date(2012, 12, 24))
 
-    def test_complex(self):
-        class MySchema(types.Object):
-            date = types.Date()
-        t = MySchema()
-        t.validate({"date": datetime.date(2012, 12, 24)})
-        t.dump({"date": datetime.date(2012, 12, 24)})
+    def test_to_python_object(self):
+        v = self.schema.to_python(datetime.date(2012, 12, 24))
+        self.assertEqual(v, datetime.date(2012, 12, 24))
+
+    def test_to_python_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_python(True)
+
+    def test_to_raw_object(self):
+        v = self.schema.to_raw(datetime.date(2012, 12, 24))
+        self.assertEqual(v, '2012-12-24')
+
+    def test_to_raw_string(self):
+        v = self.schema.to_raw('2012-12-24')
+        self.assertEqual(v, '2012-12-24')
+
+    def test_to_raw_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_raw(True)
+
+
+class TestTime(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.Time()
+
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(), {'type': 'string', 'format': 'time'}
+        )
+
+    def test_to_python_string(self):
+        v = self.schema.to_python('16:22:00')
+        self.assertEqual(v, datetime.time(16, 22, 00))
+
+    def test_to_python_object(self):
+        v = self.schema.to_python(datetime.time(16, 22, 0))
+        self.assertEqual(v, datetime.time(16, 22, 0))
+
+    def test_to_python_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_python(True)
+
+    def test_to_raw_object(self):
+        v = self.schema.to_raw(datetime.time(16, 22, 0))
+        self.assertEqual(v, '16:22:00')
+
+    def test_to_raw_string(self):
+        v = self.schema.to_raw('16:22:00')
+        self.assertEqual(v, '16:22:00')
+
+    def test_to_raw_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_raw(True)
+
+
+class TestDateTime(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.DateTime()
+
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(),
+            {'type': 'string', 'format': 'datetime'}
+        )
+
+    def test_to_python_string(self):
+        v = self.schema.to_python('2012-03-11T16:22:00')
+        self.assertEqual(v, datetime.datetime(2012, 3, 11, 16, 22, 0))
+
+    def test_to_python_object(self):
+        v = self.schema.to_python(datetime.datetime(2012, 3, 11, 16, 22, 0))
+        self.assertEqual(v, datetime.datetime(2012, 3, 11, 16, 22, 0))
+
+    def test_to_python_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_python(True)
+
+    def test_to_raw_object(self):
+        v = self.schema.to_raw(datetime.datetime(2012, 3, 11, 16, 22, 0))
+        self.assertEqual(v, '2012-03-11T16:22:00')
+
+    def test_to_raw_string(self):
+        v = self.schema.to_raw('2012-03-11 16:22:00')
+        self.assertEqual(v, '2012-03-11 16:22:00')
+
+    def test_to_raw_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_raw(True)
 
 
 class TestDuration(unittest.TestCase):
 
-    def test_validation(self):
-        t = types.Duration()
+    def setUp(self):
+        self.schema = types.Duration()
 
-        t.validate(datetime.timedelta(seconds=12))
-        t.validate(12)
-        with self.assertRaises(ValueError):
-            t.validate('crappy')
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(),
+            {'type': 'string', 'format': 'duration'}
+        )
 
-    def test_serialize(self):
-        t = types.Duration()
-        v = t.dump(datetime.timedelta(seconds=12))
-        self.assertEqual(v, '"PT12S"')
-
-    def test_loads(self):
-        t = types.Duration()
-
-        v = t.load('"PT12S"')
+    def test_to_python_string(self):
+        v = self.schema.to_python('PT12S')
         self.assertEqual(v, datetime.timedelta(seconds=12))
 
-        v = t.load('12')
+    def test_to_python_int(self):
+        v = self.schema.to_python(12)
         self.assertEqual(v, datetime.timedelta(seconds=12))
 
-        v = t.load('12.1')
-        self.assertEqual(v, datetime.timedelta(seconds=12, milliseconds=100))
+    def test_to_python_float(self):
+        v = self.schema.to_python(12.5)
+        self.assertEqual(v, datetime.timedelta(seconds=12, milliseconds=500))
 
-    def test_complex(self):
-        class MySchema(types.Object):
-            duration = types.Duration()
-        t = MySchema()
-        t.validate({"duration": datetime.timedelta(seconds=12)})
-        t.dump({"duration": datetime.timedelta(seconds=12)})
+    def test_to_python_object(self):
+        v = self.schema.to_python(datetime.timedelta(seconds=12))
+        self.assertEqual(v, datetime.timedelta(seconds=12))
+
+    def test_to_python_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_python(datetime.date(2012, 3, 11))
+
+    def test_to_raw_object(self):
+        v = self.schema.to_raw(datetime.timedelta(seconds=12))
+        self.assertEqual(v, 'PT12S')
+
+    def test_to_raw_string(self):
+        v = self.schema.to_raw('PT12S')
+        self.assertEqual(v, 'PT12S')
+
+    def test_to_raw_int(self):
+        v = self.schema.to_raw(12)
+        self.assertEqual(v, 'PT12S')
+
+    def test_to_raw_float(self):
+        v = self.schema.to_raw(12.5)
+        self.assertEqual(v, 'PT12.5S')
+
+    def test_to_raw_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_raw(datetime.date(2012, 3, 11))
+
+
+class TestTimeDelta(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.TimeDelta()
+
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(),
+            {'type': 'number'}
+        )
+
+    def test_to_python_int(self):
+        v = self.schema.to_python(12)
+        self.assertEqual(v, datetime.timedelta(seconds=12))
+
+    def test_to_python_float(self):
+        v = self.schema.to_python(12.5)
+        self.assertEqual(v, datetime.timedelta(seconds=12, milliseconds=500))
+
+    def test_to_python_object(self):
+        v = self.schema.to_python(datetime.timedelta(seconds=12))
+        self.assertEqual(v, datetime.timedelta(seconds=12))
+
+    def test_to_python_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_python(datetime.date(2012, 3, 11))
+
+    def test_to_raw_object(self):
+        v = self.schema.to_raw(datetime.timedelta(seconds=12))
+        self.assertEqual(v, 12)
+
+    def test_to_raw_int(self):
+        v = self.schema.to_raw(12)
+        self.assertEqual(v, 12)
+
+    def test_to_raw_float(self):
+        v = self.schema.to_raw(12.5)
+        self.assertEqual(v, 12.5)
+
+    def test_to_raw_error(self):
+        with self.assertRaises(exceptions.ValidationError):
+            self.schema.to_raw(datetime.date(2012, 3, 11))
 
 
 class TestObject(unittest.TestCase):
@@ -254,9 +372,9 @@ class TestObject(unittest.TestCase):
             password = types.String()
 
         data = {'username': 'admin', 'password': 'secret', 'pk': 1}
-        dumped = MySchema(additional=None).dump(data)
+        raw = MySchema(additional=None).to_raw(data)
         self.assertEqual(
-            json.loads(dumped),
+            raw,
             {'username': 'admin', 'password': 'secret', 'pk': 1}
         )
         self.assertEqual(

@@ -7,43 +7,21 @@
 pyrs schema
 ===========
 
-This framework is the base part of pyrs microframework.
-It's introduce the way to define schemas.
-Main purpose is ensure json schema validation, json serialisation but
-also possible to use it as part of ORM.
-
-Example usage
--------------
-
-.. code-block:: python
-
-   from pyrs import schema
-
-   class UserSchema(schema.Object):
-       username = schema.String(required=True, minlen=3)
-       password = schema.String(required=True, minlen=6)
-       email = schema.Email()
-       date_of_birth = schema.Date(name='dateOfBirth')
-
-       class Attrs:
-           title = "User schema"
-
-   user_schema = UserSchema()
-   user = user_schema.load(<jsonstring>)
-   user_str = user_schema.dump(user)
-
-
-Modules
--------
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
 
-   schema
+   cover
+   base
    types
    schemaio
    formats
    exceptions
+   changelog
+   license
+
 
 Indices and tables
 ------------------

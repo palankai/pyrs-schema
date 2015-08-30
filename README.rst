@@ -13,7 +13,7 @@ MicroService framework :: Schema
    :alt: Documentation Status
 
 
-| Project hompage: `<https://github.com/palankai/pyrs-schema>`_
+| Project homepage: `<https://github.com/palankai/pyrs-schema>`_
 | Documentation: `<http://pyrs-schema.readthedocs.org/>`_
 | Issues: `<https://github.com/palankai/pyrs-schema/issues>`_
 
@@ -41,16 +41,17 @@ Nutshell
         email = schema.EmailField(title='Registered email address')
 
     writer = schema.JSONWriter(UserSchema)
-    writer.validate(data) # raise exception if it someting bad happen
-    jsonstring = writer.write(data) # The validation also happens
-    jsonschemastr = writer.writeschema()
+    jsonstring = writer.write(data) # The validation also happen
+
+    schemawriter = schema.JSONSchemaWriter()
+    jsonschemastr = writer.write(UserSchema)
 
 Features
 --------
 - Easy schema definition
 - Schema validation
-- Decoupled serialisation
-- Extensibe API
+- Decoupled serialisation, validation
+- Extensible API
 
 Installation
 ------------
@@ -65,8 +66,7 @@ Dependencies
 ------------
 
 See requirements.txt. But The goal is less dependency as possible. The main
-dependency is the 
-`Python JSONSchema <https://pypi.python.org/pypi/jsonschema>`_
+dependency is the python `jsonchema <https://github.com/Julian/jsonschema>`_
 The validation is using that package.
 
 Notice that even it's a JSON schema validator this work still can be used

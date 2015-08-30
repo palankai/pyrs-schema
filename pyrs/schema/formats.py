@@ -25,7 +25,7 @@ def parse_datetime(datetimestring):
         )
     tmpdate = isodate.parse_date(datestring)
     tmptime = isodate.parse_time(timestring)
-    return datetime.combine(tmpdate, tmptime)
+    return datetime.datetime.combine(tmpdate, tmptime)
 
 
 def format_checker(name, raises=()):
