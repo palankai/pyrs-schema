@@ -39,7 +39,7 @@ class String(base.Base):
             keyword has no effect. If `min_len` is not present or its value is
             0 the value of `min_len` will be set to 1.
     """
-    _type = "string"
+    _type = 'string'
 
     def get_jsonschema(self, context=None):
         schema = super(String, self).get_jsonschema(context=context)
@@ -47,7 +47,7 @@ class String(base.Base):
             schema['pattern'] = self.get_attr('pattern')
         if self.has_attr('min_len', int):
             schema['minLength'] = self.get_attr('min_len')
-        if self.get_attr('blank', expected=bool):
+        if not self.get_attr('blank', default=True, expected=bool):
             schema['minLength'] = max(self.get_attr('min_len', 0), 1)
         if self.has_attr('max_len', int):
             schema['maxLength'] = self.get_attr('max_len')
@@ -83,7 +83,7 @@ class Number(base.Base):
             if the result of the division of the instance by this keyword's
             value is an integer.
     """
-    _type = "number"
+    _type = 'number'
 
     def get_jsonschema(self, context=None):
         schema = super(Number, self).get_jsonschema(context=context)
@@ -133,7 +133,7 @@ class Integer(Number):
 
 
 class Boolean(base.Base):
-    _type = "boolean"
+    _type = 'boolean'
 
 
 class Array(base.Base):
@@ -163,12 +163,18 @@ class Array(base.Base):
             successfully. If it has boolean value true, the instance validates
             successfully if all of its elements are unique.
     """
-    _type = "array"
+    _type = 'array'
 
     def get_jsonschema(self, context=None):
         schema = super(Array, self).get_jsonschema(context=context)
-        if self.get_attr('additional') is not None:
-            schema['additionalItems'] = self.get_attr('additional')
+        if self.has_attr('additional'):
+            if isinstance(self.get_attr('additional'), base.Schema):
+                schema['additionalItems'] = \
+                    self.get_attr('additional').get_jsonschema(context=context)
+            elif isinstance(self.get_attr('additional'), bool):
+                schema['additionalItems'] = self.get_attr('additional')
+            else:
+                raise TypeError('The additional should be bool or schema')
         if self.get_attr('max_items') is not None:
             schema['maxItems'] = self.get_attr('max_items')
         if self.get_attr('min_items') is not None:
@@ -287,7 +293,6 @@ class Object(base.Base):
         use the other schame `properties`
         """
         self._fields.update(properties)
-        self.invalidate(context=None)
 
     def to_python(self, value, context=None):
         """Convert the value to a real python object"""
@@ -344,14 +349,14 @@ class Object(base.Base):
 
 
 class Date(String):
-    _attrs = {"format": "date"}
+    _attrs = {'format': 'date'}
 
     def to_python(self, value, context=None):
         if isinstance(value, datetime.date):
             return value
         try:
             return isodate.parse_date(value)
-        except isodate.ISO8601Error:
+        except (isodate.ISO8601Error, TypeError):
             raise exceptions.ValidationError(
                 "Invalid date value '%s'" % value,
                 value=value,
@@ -363,7 +368,7 @@ class Date(String):
         if isinstance(value, datetime.date):
             return isodate.date_isoformat(value)
         if isinstance(value, six.string_types):
-            self.to_python(value)
+            self.to_python(value, context=context)
             return value
         raise exceptions.ValidationError(
             "Invalid date value '%s' and type %s" % (value, type(value)),
@@ -374,14 +379,14 @@ class Date(String):
 
 
 class Time(String):
-    _attrs = {"format": "time"}
+    _attrs = {'format': 'time'}
 
     def to_python(self, value, context=None):
         if isinstance(value, datetime.time):
             return value
         try:
             return isodate.parse_time(value)
-        except isodate.ISO8601Error:
+        except (isodate.ISO8601Error, TypeError):
             raise exceptions.ValidationError(
                 "Invalid time value '%s'" % value,
                 value=value,
@@ -393,7 +398,7 @@ class Time(String):
         if isinstance(value, datetime.time):
             return isodate.time_isoformat(value)
         if isinstance(value, six.string_types):
-            self.to_pyton(value)
+            self.to_python(value, context=context)
             return value
         raise exceptions.ValidationError(
             "Invalid time value '%s' and type %s" % (value, type(value)),
@@ -404,14 +409,14 @@ class Time(String):
 
 
 class DateTime(String):
-    _attrs = {"format": "datetime"}
+    _attrs = {'format': 'datetime'}
 
     def to_python(self, value, context=None):
         if isinstance(value, datetime.datetime):
             return value
         try:
             return formats.parse_datetime(value)
-        except isodate.ISO8601Error:
+        except (isodate.ISO8601Error, TypeError):
             raise exceptions.ValidationError(
                 "Invalid datetime value '%s'" % value,
                 value=value,
@@ -420,10 +425,10 @@ class DateTime(String):
             )
 
     def to_raw(self, value, context=None):
-        if isinstance(value, datetime.time):
+        if isinstance(value, datetime.datetime):
             return isodate.datetime_isoformat(value)
         if isinstance(value, six.string_types):
-            self.to_pyton(value)
+            self.to_python(value, context=context)
             return value
         raise exceptions.ValidationError(
             "Invalid datetime value '%s' and type %s" % (value, type(value)),
@@ -434,14 +439,16 @@ class DateTime(String):
 
 
 class Duration(String):
-    _attrs = {"format": "duration"}
+    _attrs = {'format': 'duration'}
 
     def to_python(self, value, context=None):
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
+        if isinstance(value, datetime.timedelta):
+            return value
         try:
             return isodate.parse_duration(value)
-        except isodate.ISO8601Error:
+        except (isodate.ISO8601Error, TypeError):
             raise exceptions.ValidationError(
                 "Invalid duration value '%s'" % value,
                 value=value,
@@ -508,9 +515,9 @@ class Enum(base.Base):
         :rtype: dict
         """
         schema = super(Enum, self).get_jsonschema(context=None)
-        schema.pop("type")
-        if self.get_attr("enum"):
-            schema["enum"] = self.get_attr("enum")
+        schema.pop('type')
+        if self.get_attr('enum'):
+            schema['enum'] = self.get_attr('enum')
         return schema
 
 
@@ -518,6 +525,6 @@ class Ref(base.Base):
 
     def get_jsonschema(self, context=None):
         schema = super(Ref, self).get_jsonschema(context=context)
-        schema.pop("type")
+        schema.pop('type')
         assert not schema
-        return {"$ref": "#/definitions/"+self.get_attr("ref")}
+        return {'$ref': '#/definitions/'+self.get_attr('ref')}

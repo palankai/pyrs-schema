@@ -57,15 +57,6 @@ class Schema(object):
             return True
         return False
 
-    def validate(self, obj, context=None):
-        self.validate_dict(self.to_raw(obj, context=context), context=context)
-
-    def validate_dict(self, obj, context=None):
-        self.get_validator(context=context).validate(obj)
-
-    def get_validator(self, context=None):
-        return _make_validator(self.get_jsonschema(context=context))
-
     def to_raw(self, value, context=None):
         """Convert the value to a dict of primitives"""
         return value
@@ -80,10 +71,6 @@ class Schema(object):
         if isinstance(other, Schema):
             return self.get_jsonschema() == other.get_jsonschema()
         return id(self) == id(other)
-
-    def invalidate(self, context=None):
-        if hasattr(self, "_validator"):
-            self._validator = None
 
 
 class DeclarativeMetaclass(type):

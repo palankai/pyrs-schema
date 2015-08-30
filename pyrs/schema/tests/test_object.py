@@ -1,7 +1,5 @@
 import unittest
 
-import jsonschema
-
 from .. import types
 
 
@@ -62,13 +60,6 @@ class TestSchemaValidation(unittest.TestCase):
             s, expected
         )
 
-    def test_declarative_schema_validation(self):
-        class MyObject(types.Object):
-            string = types.String(name="String")
-
-        t = MyObject()
-        t.validate({"string": "value"})
-
     def test_subschema(self):
         class MySubObject(types.Object):
             integer = types.Integer(name="int")
@@ -91,8 +82,6 @@ class TestSchemaValidation(unittest.TestCase):
                 }
             }
         )
-        t.validate({"string": "hello", "sub": {"int": 12}})
-        t.validate({"string": "hello", "sub": None})
 
     def test_definitions(self):
         class MySubObject(types.Object):
@@ -122,8 +111,6 @@ class TestSchemaValidation(unittest.TestCase):
                 }
             }
         )
-        t.validate({"String": "hello", "sub": {"int": 12}})
-        t.validate({"String": "hello", "sub": None})
 
     def test_deep_definitions(self):
         class MySubObject(types.Object):
@@ -159,8 +146,6 @@ class TestSchemaValidation(unittest.TestCase):
                 }
             }
         )
-        t.validate({"String": "hello", "sub": {"int": 12}})
-        t.validate({"String": "hello", "sub": None})
 
 
 class TestSchemaToPython(unittest.TestCase):
@@ -242,20 +227,6 @@ class TestSchemaAdditional(unittest.TestCase):
             }
         )
 
-    def test_validation(self):
-        class MyObject(types.Object):
-            num = types.Integer()
-            string = types.String(name="String")
-
-            class Attrs:
-                additional = False
-
-        t = MyObject()
-        t.validate({'num': 12})
-        t.validate({'string': 'string'})
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate({'string': 'string', 'extra': 'invalid'})
-
 
 class TestSchemaPattern(unittest.TestCase):
 
@@ -291,24 +262,6 @@ class TestSchemaPattern(unittest.TestCase):
             }
         )
 
-    def test_validation(self):
-        class MyObject(types.Object):
-            num = types.Integer()
-            string = types.String(name="String")
-
-            class Attrs:
-                additional = False
-                patterns = {
-                    'name_[a-z]{2}': types.String()
-                }
-
-        t = MyObject()
-        t.validate({'num': 12})
-        t.validate({'string': 'string'})
-        t.validate({'string': 'string', 'name_en': 'English'})
-        with self.assertRaises(jsonschema.exceptions.ValidationError):
-            t.validate({'string': 'string', 'extra': 'invalid'})
-
 
 class TestSchemaExtend(unittest.TestCase):
 
@@ -321,8 +274,6 @@ class TestSchemaExtend(unittest.TestCase):
                 additional = False
 
         t = MyObject()
-        t.get_jsonschema()
-        t.validate({'num': 12})
         t.extend({
             'title': types.String()
         })
@@ -339,7 +290,6 @@ class TestSchemaExtend(unittest.TestCase):
                 'additionalProperties': False,
             }
         )
-        t.validate({'num': 12, 'title': 'test'})
 
     def test_initial_extend(self):
         class MyObject(types.Object):
@@ -362,7 +312,6 @@ class TestSchemaExtend(unittest.TestCase):
                 'additionalProperties': False,
             }
         )
-        t.validate({'num': 12, 'title': 'test'})
 
 
 class TestSchemaInclude(unittest.TestCase):
@@ -386,7 +335,6 @@ class TestSchemaInclude(unittest.TestCase):
                 'additionalProperties': False,
             }
         )
-        t.validate({'num': 12})
 
 
 class TestSchemaExclude(unittest.TestCase):
@@ -410,7 +358,6 @@ class TestSchemaExclude(unittest.TestCase):
                 'additionalProperties': False,
             }
         )
-        t.validate({'num': 12})
 
 
 class TestSchemaTagFilter(unittest.TestCase):
@@ -446,7 +393,6 @@ class TestSchemaTagFilter(unittest.TestCase):
                 'additionalProperties': False,
             }
         )
-        t.validate({'fullname': 'test'}, context=c)
 
     def test_context_exclude_initial(self):
         class SubSchema(types.Object):
@@ -478,7 +424,6 @@ class TestSchemaTagFilter(unittest.TestCase):
                 'additionalProperties': False,
             }
         )
-        t.validate({'fullname': 'test'})
 
     def test_context_exclude_tags_mix(self):
         class SubSchema(types.Object):
@@ -512,4 +457,3 @@ class TestSchemaTagFilter(unittest.TestCase):
                 'additionalProperties': False,
             }
         )
-        t.validate({'fullname': 'test'})
