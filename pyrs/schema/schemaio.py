@@ -45,14 +45,17 @@ class Validator(SchemaIO):
         )
 
 
-class SchemaWriter(SchemaIO):
+class SchemaWriter(object):
     """
     Abstract implementation of schema writer. The main purpose of this class
     to ensure different useage of the schema. Add extra value if it's
     necessary which can't be implemented by the schema itself.
     """
 
-    def write(self):
+    def __init__(self, context=None):
+        self.context = context
+
+    def write(self, schema):
         raise NotImplementedError(
             'The write method of SchemaWriter is abstract'
         )
@@ -102,11 +105,13 @@ class Reader(SchemaIO):
 
 class JSONSchemaWriter(SchemaWriter):
 
-    def write(self, context=None):
-        return json.dumps(self.extract(context=context))
+    def write(self, schema, context=None):
+        return json.dumps(self.extract(schema, context=context))
 
-    def extract(self, context=None):
-        return self.schema.get_jsonschema(context=context)
+    def extract(self, schema, context=None):
+        if inspect.isclass(schema):
+            schema = schema()
+        return schema.get_jsonschema(context=context)
 
 
 class JSONSchemaValidator(Validator):

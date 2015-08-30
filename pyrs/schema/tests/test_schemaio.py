@@ -19,10 +19,10 @@ class TestSchemaWriter(unittest.TestCase):
 
     def test_write(self):
         t1 = types.String()
-        io = schemaio.SchemaWriter(t1)
+        io = schemaio.SchemaWriter()
 
         with self.assertRaises(NotImplementedError):
-            io.write()
+            io.write(t1)
 
 
 class TestValidator(unittest.TestCase):
@@ -59,16 +59,16 @@ class TestJSONSchemaWriter(unittest.TestCase):
 
     def test_extract(self):
         t1 = types.String()
-        io = schemaio.JSONSchemaWriter(t1)
+        io = schemaio.JSONSchemaWriter()
 
-        s = io.extract()
+        s = io.extract(t1)
         self.assertEqual(s, {'type': 'string'})
 
     def test_write(self):
         t1 = types.String()
-        io = schemaio.JSONSchemaWriter(t1)
+        io = schemaio.JSONSchemaWriter()
 
-        s = io.write()
+        s = io.write(t1)
         self.assertEqual(s, '{"type": "string"}')
 
 
