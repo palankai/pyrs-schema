@@ -139,6 +139,56 @@ class TestJSONSchemaValidator(unittest.TestCase):
         self.assertEqual(errors[2]['against'], 'string')
 
 
+class TestJSONSchemaDictValidator(unittest.TestCase):
+
+    def test_validation_error_of_object(self):
+        io = schemaio.JSONSchemaDictValidator({
+            's1': types.String(),
+            's2': types.String()
+        })
+
+        with self.assertRaises(exceptions.ValidationErrors) as ctx:
+            io.validate({"s1": 12, "s2": 13})
+        ex = ctx.exception
+
+        errors = sorted(ex.errors, key=lambda v: v['value'])
+
+        self.assertEqual(errors[0]['message'], "12 is not of type 'string'")
+        self.assertEqual(errors[0]['path'], 's1')
+        self.assertEqual(errors[0]['value'], 12)
+        self.assertEqual(errors[0]['invalid'], 'type')
+        self.assertEqual(errors[0]['against'], 'string')
+
+    def test_validation_error_of_complex(self):
+        class MyObjectBase(types.Object):
+            s1 = types.String()
+            s2 = types.String(min_len=2, pattern=r'^[0-9a-f]+$')
+
+        class MyObjectMid(types.Object):
+            o2 = MyObjectBase()
+
+        io = schemaio.JSONSchemaDictValidator({'o1': MyObjectMid()})
+
+        with self.assertRaises(exceptions.ValidationErrors) as ctx:
+            io.validate({"o1": {"o2": {"s1": 12, "s2": "z"}}})
+        ex = ctx.exception
+        errors = sorted(ex.errors, key=lambda v: v['invalid'])
+
+        self.assertEqual(errors[0]['path'], 'o1.o2.s2')
+        self.assertEqual(errors[0]['invalid'], 'minLength')
+        self.assertEqual(errors[0]['against'], 2)
+
+        self.assertEqual(errors[1]['path'], 'o1.o2.s2')
+        self.assertEqual(errors[1]['invalid'], 'pattern')
+        self.assertEqual(errors[1]['against'], '^[0-9a-f]+$')
+
+        self.assertEqual(errors[2]['message'], "12 is not of type 'string'")
+        self.assertEqual(errors[2]['path'], 'o1.o2.s1')
+        self.assertEqual(errors[2]['value'], 12)
+        self.assertEqual(errors[2]['invalid'], 'type')
+        self.assertEqual(errors[2]['against'], 'string')
+
+
 class TestJSONWriter(unittest.TestCase):
 
     def test_write_basic(self):

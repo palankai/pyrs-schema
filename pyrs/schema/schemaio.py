@@ -111,20 +111,35 @@ class JSONSchemaWriter(SchemaWriter):
 
 class JSONSchemaValidator(Validator):
 
+    def __init__(self, schema, context=None):
+        super(JSONSchemaValidator, self).__init__(schema, context)
+        self._make_validator()
+
     def validate(self, data):
-        validator = base._make_validator(
+        errors = []
+        for ex in self.validator.iter_errors(data):
+            self._update_errors_with_exception(errors, ex)
+        self._raise_exception_when_errors(errors, data)
+
+    def _make_validator(self):
+        self.validator = base._make_validator(
             self.schema.get_schema(context=self.context)
         )
-        errors = []
-        for e in validator.iter_errors(data):
-            errors.append({
-                'error': 'ValidationError',
-                'message': e.message,
-                'value': e.instance,
-                'invalid': e.schema_path[-1],
-                'against': e.validator_value,
-                'path': ".".join(e.path),
-            })
+
+    def _update_errors_with_exception(self, errors, ex, path_prefix=None):
+        path = list(ex.path)
+        if path_prefix:
+            path.insert(0, path_prefix)
+        errors.append({
+            'error': 'ValidationError',
+            'message': ex.message,
+            'value': ex.instance,
+            'invalid': ex.schema_path[-1],
+            'against': ex.validator_value,
+            'path': ".".join(path),
+        })
+
+    def _raise_exception_when_errors(self, errors, data):
         if errors:
             raise exceptions.ValidationErrors(
                 '%s validation error(s) raised' % len(errors),
@@ -133,11 +148,45 @@ class JSONSchemaValidator(Validator):
             )
 
 
+class JSONSchemaDictValidator(JSONSchemaValidator):
+
+    def _make_validator(self):
+        self.validators = {}
+        for field, item in self.schema.items():
+            self.validators[field] = base._make_validator(
+                item.get_schema(context=self.context)
+            )
+
+    def validate(self, data):
+        if not isinstance(data, dict):
+            raise exceptions.ParseError(
+                'Unrecognised input format: %s given, dict type expected'
+                % type(data),
+                value=data
+            )
+        errors = []
+        for field, value in data.items():
+            if field not in self.validators:
+                continue
+            validator = self.validators[field]
+            for ex in validator.iter_errors(value):
+                self._update_errors_with_exception(
+                    errors, ex, path_prefix=field
+                )
+        self._raise_exception_when_errors(errors, data)
+
+
+def select_json_validator(schema, context=None):
+    if isinstance(schema, dict):
+        return JSONSchemaDictValidator(schema, context=context)
+    return JSONSchemaValidator(schema, context=context)
+
+
 class JSONWriter(Writer):
 
     def __init__(self, schema, context=None):
         super(JSONWriter, self).__init__(schema, context=context)
-        self.validator = JSONSchemaValidator(schema, context=context)
+        self.validator = select_json_validator(self.schema, context)
 
     def write(self, data):
         data = self._to_dict(data)
@@ -167,7 +216,7 @@ class JSONReader(Reader):
 
     def __init__(self, schema, context=None):
         super(JSONReader, self).__init__(schema, context=context)
-        self.validator = JSONSchemaValidator(schema, context=context)
+        self.validator = select_json_validator(self.schema, context)
 
     def read(self, data):
         self._validate_format(data)
@@ -199,7 +248,7 @@ class JSONFormReader(JSONReader):
         if not isinstance(schema, types.Object):
             raise TypeError('Schema should be Object type')
         super(JSONFormReader, self).__init__(schema, context=context)
-        self.validator = JSONSchemaValidator(schema, context=context)
+        self.validator = select_json_validator(self.schema, context)
 
     def read(self, data):
         self._validate_format(data)
