@@ -250,8 +250,6 @@ class JSONReader(Reader):
 class JSONFormReader(JSONReader):
 
     def __init__(self, schema, context=None):
-        if not isinstance(schema, types.Object):
-            raise TypeError('Schema should be Object type')
         super(JSONFormReader, self).__init__(schema, context=context)
         self.validator = select_json_validator(self.schema, context)
 

@@ -4,6 +4,14 @@ Changelog
 
 The [!] sign marks the incompatible changes.
 
+0.7.2
+-----
+
+Fixes
+~~~~~
+
+ * Get rid of the validation on FormReader
+
 0.7.1
 -----
 
