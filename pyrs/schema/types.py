@@ -13,24 +13,125 @@ from . import lib
 
 
 class String(base.Base):
+    """
+    String specific arguments:
+        pattern:
+            The value of this keyword MUST be a string. This string SHOULD be
+            a valid regular expression, according to the ECMA 262 regular
+            expression dialect. A string instance is considered valid if the
+            regular expression matches the instance successfully.
+            Recall: regular expressions are not implicitly anchored.
+        minlen (int >=0):
+            The value of this keyword MUST be an integer. This integer MUST be
+            greater than, or equal to, 0. A string instance is valid against
+            this keyword if its length is greater than, or equal to,
+            the value of this keyword.
+        maxlen (int >=minlen):
+            The value of this keyword MUST be an integer. This integer MUST be
+            greater than, or equal to, 0. A string instance is valid against
+            this keyword if its length is less than, or equal to,
+            the value of this keyword.
+        blank (bool):
+            The value of `blank` MUST be a boolean.
+            Successful validation depends on presence and value of `min_len`.
+            If `min_len` is present and its value is greather than 0 this
+            keyword has no effect. If `min_len` is not present or its value is
+            0 the value of `min_len` will be set to 1.
+    """
     _type = "string"
 
     def make_schema(self, context=None):
         schema = super(String, self).make_schema(context=context)
-        if self.get_attr("pattern"):
-            schema["pattern"] = self.get_attr("pattern")
+        if self.has_attr('pattern', six.string_types):
+            schema['pattern'] = self.get_attr('pattern')
+        if self.has_attr('min_len', int):
+            schema['minLength'] = self.get_attr('min_len')
+        if self.get_attr('blank', expected=bool):
+            schema['minLength'] = max(self.get_attr('min_len', 0), 1)
+        if self.has_attr('max_len', int):
+            schema['maxLength'] = self.get_attr('max_len')
         return schema
 
     def to_object(self, value, context=None):
         return value
 
 
-class Integer(base.Base):
-    _type = "integer"
-
-
 class Number(base.Base):
+    """
+    Number specific agruments:
+        maximum, exclusive_max:
+            The value of `maximum` MUST be a number. The value of
+            `exclusive_max` MUST be a boolean.
+            If `exclusive_max` is present, `maximum` MUST also be present.
+            Successful validation depends on the presence and value of
+            `exclusive_max`. If it iss is not present, or has boolean value
+            false, then the instance is valid if it is lower than, or equal to,
+            the value of `maximum`. If `exclusive_max` has boolean value true,
+            the instance is valid if it is strictly lower than the
+            value of `maximum`
+        minimum, exclusive_min:
+            The value of `minimum` MUST be a number. The value of
+            `exclusive_min` MUST be a boolean.
+            If `exclusive_min` is present, `minimum` MUST also be present.
+            Successful validation depends on the presence and value of
+            `exclusive_min`. If it iss is not present, or has boolean value
+            false, then the instance is valid if it is greater than,
+            or equal to, the value of `minimum`. If `exclusive_min` is present
+            and has boolean value true, the instance is valid if it is strictly
+            greater than the value of `minimum`.
+        multiple:
+            The value MUST be an number. This number MUST be strictly
+            greater than 0. A numeric instance is valid against `multiple`
+            if the result of the division of the instance by this keyword's
+            value is an integer.
+    """
     _type = "number"
+
+    def make_schema(self, context=None):
+        schema = super(Number, self).make_schema(context=context)
+        if self.has_attr('multiple', int):
+            schema['multipleOf'] = self.get_attr('multiple')
+        if self.has_attr('maximum', int):
+            schema['maximum'] = self.get_attr('maximum')
+        if self.has_attr('minimum', int):
+            schema['minimum'] = self.get_attr('minimum')
+        if self.has_attr('exclusive_max', bool) and 'maximum' in schema:
+            schema['exclusiveMaximum'] = self.get_attr('exclusive_max')
+        if self.has_attr('exclusive_min', bool) and 'minimum' in schema:
+            schema['exclusiveMinimum'] = self.get_attr('exclusive_min')
+        return schema
+
+
+class Integer(Number):
+    """
+    Integer specific agruments:
+        maximum, exclusive_max:
+            The value of `maximum` MUST be a number. The value of
+            `exclusive_max` MUST be a boolean.
+            If "exclusiveMaximum" is present, "maximum" MUST also be present.
+            Successful validation depends on the presence and value of
+            `exclusive_max`. If it iss is not present, or has boolean value
+            false, then the instance is valid if it is lower than, or equal to,
+            the value of `maximum`. If `exclusive_max` has boolean value true,
+            the instance is valid if it is strictly lower than the
+            value of `maximum`
+        minimum, exclusive_min:
+            The value of `minimum` MUST be a number. The value of
+            `exclusive_min` MUST be a boolean.
+            If "exclusiveMinimum" is present, "minimum" MUST also be present.
+            Successful validation depends on the presence and value of
+            `exclusive_min`. If it iss is not present, or has boolean value
+            false, then the instance is valid if it is greater than,
+            or equal to, the value of `minimum`. If `exclusive_min` is present
+            and has boolean value true, the instance is valid if it is strictly
+            greater than the value of `minimum`.
+        multiple:
+            The value MUST be an number. This number MUST be strictly
+            greater than 0. A numeric instance is valid against `multiple`
+            if the result of the division of the instance by this keyword's
+            value is an integer.
+    """
+    _type = "integer"
 
 
 class Boolean(base.Base):

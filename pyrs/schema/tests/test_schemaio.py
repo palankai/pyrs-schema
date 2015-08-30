@@ -1,5 +1,6 @@
 import unittest
 
+from .. import exceptions
 from .. import schemaio
 from .. import types
 
@@ -12,36 +13,6 @@ class TestSchemaIO(unittest.TestCase):
 
         self.assertEqual(io.schema, t)
 
-    def test_init_store_schema_none(self):
-        io = schemaio.SchemaIO()
-
-        self.assertEqual(io.schema, None)
-
-    def test_get_schema_raise_error_with_none(self):
-        io = schemaio.SchemaIO()
-
-        with self.assertRaises(AttributeError):
-            io.get_schema()
-
-    def test_get_schema_gives_back_the_param(self):
-        t = types.String()
-        io = schemaio.SchemaIO()
-
-        self.assertEqual(io.get_schema(t), t)
-
-    def test_get_schema_gives_back_the_init_schema(self):
-        t = types.String()
-        io = schemaio.SchemaIO(t)
-
-        self.assertEqual(io.get_schema(), t)
-
-    def test_get_schema_prioritise_well(self):
-        t1 = types.String()
-        t2 = types.Integer()
-        io = schemaio.SchemaIO(t1)
-
-        self.assertEqual(io.get_schema(t2), t2)
-
 
 class TestSchemaWriter(unittest.TestCase):
 
@@ -50,12 +21,6 @@ class TestSchemaWriter(unittest.TestCase):
         io = schemaio.SchemaWriter(t1)
 
         self.assertEqual(io.write('test'), '"test"')
-
-    def test_write_with_given(self):
-        t1 = types.String()
-        io = schemaio.SchemaWriter()
-
-        self.assertEqual(io.write('test', schema=t1), '"test"')
 
 
 class TestSchemaReader(unittest.TestCase):
@@ -66,12 +31,6 @@ class TestSchemaReader(unittest.TestCase):
 
         self.assertEqual(io.read('"test"'), 'test')
 
-    def test_write_with_given(self):
-        t1 = types.String()
-        io = schemaio.SchemaReader()
-
-        self.assertEqual(io.read('"test"', schema=t1), 'test')
-
 
 class TestJSONWriter(unittest.TestCase):
 
@@ -81,23 +40,89 @@ class TestJSONWriter(unittest.TestCase):
 
         self.assertEqual(io.write('test'), '"test"')
 
-    def test_write_with_given(self):
-        t1 = types.String()
-        io = schemaio.JSONWriter()
-
-        self.assertEqual(io.write('test', schema=t1), '"test"')
-
 
 class TestJSONReader(unittest.TestCase):
 
-    def test_write(self):
+    def test_read_basic(self):
         t1 = types.String()
         io = schemaio.JSONReader(t1)
 
         self.assertEqual(io.read('"test"'), 'test')
 
-    def test_write_with_given(self):
+    def test_raise_parse_error_when_incorrect_Data(self):
         t1 = types.String()
-        io = schemaio.JSONReader()
+        io = schemaio.JSONReader(t1)
 
-        self.assertEqual(io.read('"test"', schema=t1), 'test')
+        with self.assertRaises(exceptions.ParseError):
+            io.read(12)
+
+    def test_raise_parse_error(self):
+        t1 = types.String()
+        io = schemaio.JSONReader(t1)
+
+        with self.assertRaises(exceptions.ParseError):
+            io.read('text')
+
+    def test_validation_error(self):
+        t1 = types.String()
+        io = schemaio.JSONReader(t1)
+
+        with self.assertRaises(exceptions.ValidationError) as ctx:
+            io.read('12')
+        ex = ctx.exception
+
+        self.assertEqual(ex.value, 12)
+        self.assertEqual(len(ex.errors), 1)
+        error = ex.errors[0]
+
+        self.assertEqual(error['message'], "12 is not of type 'string'")
+        self.assertEqual(error['path'], '')
+        self.assertEqual(error['value'], 12)
+        self.assertEqual(error['invalid'], 'type')
+
+    def test_validation_error_of_object(self):
+        class MyObject(types.Object):
+            s1 = types.String()
+            s2 = types.String()
+        io = schemaio.JSONReader(MyObject)
+
+        with self.assertRaises(exceptions.ValidationError) as ctx:
+            io.read('{"s1": 12, "s2": 13}')
+        ex = ctx.exception
+
+        self.assertEqual(ex.errors[0]['message'], "12 is not of type 'string'")
+        self.assertEqual(ex.errors[0]['path'], 's1')
+        self.assertEqual(ex.errors[0]['value'], 12)
+        self.assertEqual(ex.errors[0]['invalid'], 'type')
+        self.assertEqual(ex.errors[0]['against'], 'string')
+
+    def test_validation_error_of_complex(self):
+        class MyObjectBase(types.Object):
+            s1 = types.String()
+            s2 = types.String(min_len=2, pattern=r'^[0-9a-f]+$')
+
+        class MyObjectMid(types.Object):
+            o2 = MyObjectBase()
+
+        class MyObject(types.Object):
+            o1 = MyObjectMid()
+
+        io = schemaio.JSONReader(MyObject)
+
+        with self.assertRaises(exceptions.ValidationError) as ctx:
+            io.read('{"o1": {"o2": {"s1": 12, "s2": "z"}}}')
+        ex = ctx.exception
+
+        self.assertEqual(ex.errors[0]['message'], "12 is not of type 'string'")
+        self.assertEqual(ex.errors[0]['path'], 'o1.o2.s1')
+        self.assertEqual(ex.errors[0]['value'], 12)
+        self.assertEqual(ex.errors[0]['invalid'], 'type')
+        self.assertEqual(ex.errors[0]['against'], 'string')
+
+        self.assertEqual(ex.errors[1]['path'], 'o1.o2.s2')
+        self.assertEqual(ex.errors[1]['invalid'], 'pattern')
+        self.assertEqual(ex.errors[1]['against'], '^[0-9a-f]+$')
+
+        self.assertEqual(ex.errors[2]['path'], 'o1.o2.s2')
+        self.assertEqual(ex.errors[2]['invalid'], 'minLength')
+        self.assertEqual(ex.errors[2]['against'], 2)

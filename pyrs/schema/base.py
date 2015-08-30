@@ -29,8 +29,24 @@ class Schema(object):
             self._attrs = collections.OrderedDict()
         self._attrs.update(attrs)
 
-    def get_attr(self, name, default=None):
-        return self._attrs.get(name, default)
+    def get_attr(self, name, default=None, expected=None, throw=True):
+        if self.has_attr(name, expected, throw):
+            return self._attrs.get(name)
+        return default
+
+    def has_attr(self, name, expected=None, throw=True):
+        if name not in self._attrs:
+            return False
+        if expected:
+            check = isinstance(self.get_attr(name), expected)
+            if check:
+                return True
+            if throw:
+                raise TypeError(
+                    'Invalid type of \'%s\', expected: %s' % expected
+                )
+            return False
+        return True
 
     def get_schema(self, context=None):
         return self._schema

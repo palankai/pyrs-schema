@@ -4,7 +4,6 @@ import jsonschema
 import mock
 
 from .. import base
-from .. import exceptions
 from .. import types
 
 
@@ -151,7 +150,7 @@ class TestSchema(unittest.TestCase):
 
         s = MySchema()
         s.validate({'num': 12})
-        with self.assertRaises(exceptions.ValidationError):
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
             s.validate({'num': 12.1})
 
     def test_validation_inline(self):
@@ -162,7 +161,7 @@ class TestSchema(unittest.TestCase):
             }
         })
         s.validate({'num': 12})
-        with self.assertRaises(exceptions.ValidationError):
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
             s.validate({'num': 12.1})
 
     def test_redeclaration_raise_error(self):
