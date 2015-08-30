@@ -112,17 +112,18 @@ class TestJSONReader(unittest.TestCase):
         with self.assertRaises(exceptions.ValidationError) as ctx:
             io.read('{"o1": {"o2": {"s1": 12, "s2": "z"}}}')
         ex = ctx.exception
+        errors = sorted(ex.errors, key=lambda v: v['invalid'])
 
-        self.assertEqual(ex.errors[0]['message'], "12 is not of type 'string'")
-        self.assertEqual(ex.errors[0]['path'], 'o1.o2.s1')
-        self.assertEqual(ex.errors[0]['value'], 12)
-        self.assertEqual(ex.errors[0]['invalid'], 'type')
-        self.assertEqual(ex.errors[0]['against'], 'string')
+        self.assertEqual(errors[0]['path'], 'o1.o2.s2')
+        self.assertEqual(errors[0]['invalid'], 'minLength')
+        self.assertEqual(errors[0]['against'], 2)
 
-        self.assertEqual(ex.errors[1]['path'], 'o1.o2.s2')
-        self.assertEqual(ex.errors[1]['invalid'], 'pattern')
-        self.assertEqual(ex.errors[1]['against'], '^[0-9a-f]+$')
+        self.assertEqual(errors[1]['path'], 'o1.o2.s2')
+        self.assertEqual(errors[1]['invalid'], 'pattern')
+        self.assertEqual(errors[1]['against'], '^[0-9a-f]+$')
 
-        self.assertEqual(ex.errors[2]['path'], 'o1.o2.s2')
-        self.assertEqual(ex.errors[2]['invalid'], 'minLength')
-        self.assertEqual(ex.errors[2]['against'], 2)
+        self.assertEqual(errors[2]['message'], "12 is not of type 'string'")
+        self.assertEqual(errors[2]['path'], 'o1.o2.s1')
+        self.assertEqual(errors[2]['value'], 12)
+        self.assertEqual(errors[2]['invalid'], 'type')
+        self.assertEqual(errors[2]['against'], 'string')
