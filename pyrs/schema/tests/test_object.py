@@ -362,38 +362,6 @@ class TestSchemaExclude(unittest.TestCase):
 
 class TestSchemaTagFilter(unittest.TestCase):
 
-    def test_context_exclude(self):
-        class SubSchema(types.Object):
-            name = types.String()
-            password = types.String(tags=['sensitive'])
-
-        class MyObject(types.Object):
-            fullname = types.String()
-            email = types.String(required=True, tags=['sensitive'])
-            login = SubSchema(additional=None)
-
-            class Attrs:
-                additional = False
-
-        t = MyObject()
-        c = {'exclude_tags': 'sensitive'}
-        self.assertEqual(
-            t.get_jsonschema(context=c),
-            {
-                "type": "object",
-                "properties": {
-                    "fullname": {"type": "string"},
-                    'login': {
-                        'type': 'object',
-                        'properties': {
-                            'name': {'type': 'string'}
-                        }
-                    }
-                },
-                'additionalProperties': False,
-            }
-        )
-
     def test_context_exclude_initial(self):
         class SubSchema(types.Object):
             name = types.String()
@@ -434,15 +402,14 @@ class TestSchemaTagFilter(unittest.TestCase):
         class MyObject(types.Object):
             fullname = types.String()
             email = types.String(required=True, tags=['sensitive'])
-            login = SubSchema(additional=None)
+            login = SubSchema(additional=None, exclude_tags='readonly')
 
             class Attrs:
                 additional = False
 
         t = MyObject(exclude_tags='sensitive')
-        c = {'exclude_tags': 'readonly'}
         self.assertEqual(
-            t.get_jsonschema(context=c),
+            t.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {

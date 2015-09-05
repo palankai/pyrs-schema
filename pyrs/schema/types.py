@@ -10,7 +10,6 @@ import six
 from . import base
 from . import exceptions
 from . import formats
-from . import lib
 
 
 class String(base.Base):
@@ -262,21 +261,14 @@ class Object(base.Base):
     def _update_jsonschema_properties(self, schema, context=None):
         if context is None:
             context = {}
-        attr_exclude_tags = lib.ensure_set(self.get_attr('exclude_tags'))
-        ctx_exclude_tags = lib.ensure_set(context.get('exclude_tags'))
-        exclude_tags = attr_exclude_tags | ctx_exclude_tags
-        if attr_exclude_tags:
-            context = context.copy()
-            context['exclude_tags'] = exclude_tags
         required = []
         properties = collections.OrderedDict()
         for key, prop in self._fields.items():
-            if key in self.get_attr('exclude', []):
-                continue
-            if self.get_attr('include'):
-                if key not in lib.ensure_list(self.get_attr('include')):
-                    continue
-            if exclude_tags and prop.has_tags(exclude_tags):
+            if(
+                key in self.exclude or
+                self.include is not None and key not in self.include or
+                prop.has_tags(self.exclude_tags)
+            ):
                 continue
             name = prop.get_attr("name", key)
             properties[name] = prop.get_jsonschema(context=context)

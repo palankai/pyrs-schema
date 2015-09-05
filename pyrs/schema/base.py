@@ -63,6 +63,21 @@ class Schema(object):
             root = root._parent
         return root
 
+    @property
+    def exclude_tags(self):
+        tags = lib.ensure_set(self._attrs.get('exclude_tags'))
+        if self._parent:
+            tags.update(self._parent.exclude_tags)
+        return tags
+
+    @property
+    def include(self):
+        return self._attrs.get('include', None)
+
+    @property
+    def exclude(self):
+        return lib.ensure_list(self._attrs.get('exclude'))
+
     def get_jsonschema(self, context=None):
         return self._jsonschema
 
