@@ -27,11 +27,10 @@ class SchemaIO(object):
     based on primitive values.
     """
 
-    def __init__(self, schema, context=None):
+    def __init__(self, schema):
         if inspect.isclass(schema):
             schema = schema()
         self.schema = schema
-        self.context = context
 
 
 class Validator(SchemaIO):
@@ -51,9 +50,6 @@ class SchemaWriter(object):
     to ensure different useage of the schema. Add extra value if it's
     necessary which can't be implemented by the schema itself.
     """
-
-    def __init__(self, context=None):
-        self.context = context
 
     def write(self, schema):
         raise NotImplementedError(
@@ -105,19 +101,19 @@ class Reader(SchemaIO):
 
 class JSONSchemaWriter(SchemaWriter):
 
-    def write(self, schema, context=None):
-        return json.dumps(self.extract(schema, context=context))
+    def write(self, schema):
+        return json.dumps(self.extract(schema))
 
-    def extract(self, schema, context=None):
+    def extract(self, schema):
         if inspect.isclass(schema):
             schema = schema()
-        return schema.get_jsonschema(context=context)
+        return schema.get_jsonschema()
 
 
 class JSONSchemaValidator(Validator):
 
-    def __init__(self, schema, context=None):
-        super(JSONSchemaValidator, self).__init__(schema, context)
+    def __init__(self, schema):
+        super(JSONSchemaValidator, self).__init__(schema)
         self._make_validator()
 
     def validate(self, data):
@@ -128,7 +124,7 @@ class JSONSchemaValidator(Validator):
 
     def _make_validator(self):
         self.validator = base._make_validator(
-            self.schema.get_jsonschema(context=self.context)
+            self.schema.get_jsonschema()
         )
 
     def _update_errors_with_exception(self, errors, ex, path_prefix=None):
@@ -159,7 +155,7 @@ class JSONSchemaDictValidator(JSONSchemaValidator):
         self.validators = {}
         for field, item in self.schema.items():
             self.validators[field] = base._make_validator(
-                item.get_jsonschema(context=self.context)
+                item.get_jsonschema()
             )
 
     def validate(self, data):
@@ -181,17 +177,17 @@ class JSONSchemaDictValidator(JSONSchemaValidator):
         self._raise_exception_when_errors(errors, data)
 
 
-def select_json_validator(schema, context=None):
+def select_json_validator(schema):
     if isinstance(schema, dict):
-        return JSONSchemaDictValidator(schema, context=context)
-    return JSONSchemaValidator(schema, context=context)
+        return JSONSchemaDictValidator(schema)
+    return JSONSchemaValidator(schema)
 
 
 class JSONWriter(Writer):
 
-    def __init__(self, schema, context=None):
-        super(JSONWriter, self).__init__(schema, context=context)
-        self.validator = select_json_validator(self.schema, context)
+    def __init__(self, schema):
+        super(JSONWriter, self).__init__(schema)
+        self.validator = select_json_validator(self.schema)
 
     def write(self, data):
         data = self._to_raw(data)
@@ -199,7 +195,7 @@ class JSONWriter(Writer):
         return self._dumps(data)
 
     def _to_raw(self, data):
-        return self.schema.to_raw(data, context=self.context)
+        return self.schema.to_raw(data)
 
     def _dumps(self, data):
         return json.dumps(data, default=self._dump_default)
@@ -219,9 +215,9 @@ class JSONWriter(Writer):
 
 class JSONReader(Reader):
 
-    def __init__(self, schema, context=None):
-        super(JSONReader, self).__init__(schema, context=context)
-        self.validator = select_json_validator(self.schema, context)
+    def __init__(self, schema):
+        super(JSONReader, self).__init__(schema)
+        self.validator = select_json_validator(self.schema)
 
     def read(self, data):
         self._validate_format(data)
@@ -246,18 +242,16 @@ class JSONReader(Reader):
     def _to_python(self, data):
         if isinstance(self.schema, dict):
             for k in set(data.keys()) & set(self.schema.keys()):
-                data[k] = self.schema[k].to_python(
-                    data[k], context=self.context
-                )
+                data[k] = self.schema[k].to_python(data[k])
             return data
-        return self.schema.to_python(data, context=self.context)
+        return self.schema.to_python(data)
 
 
 class JSONFormReader(JSONReader):
 
-    def __init__(self, schema, context=None):
-        super(JSONFormReader, self).__init__(schema, context=context)
-        self.validator = select_json_validator(self.schema, context)
+    def __init__(self, schema):
+        super(JSONFormReader, self).__init__(schema)
+        self.validator = select_json_validator(self.schema)
 
     def read(self, data):
         self._validate_format(data)

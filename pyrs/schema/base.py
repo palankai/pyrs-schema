@@ -78,7 +78,7 @@ class Schema(object):
     def exclude(self):
         return lib.ensure_list(self._attrs.get('exclude'))
 
-    def get_jsonschema(self, context=None):
+    def get_jsonschema(self):
         return self._jsonschema
 
     def get_tags(self):
@@ -91,11 +91,11 @@ class Schema(object):
             return True
         return False
 
-    def to_raw(self, value, context=None):
+    def to_raw(self, value):
         """Convert the value to a dict of primitives"""
         return value
 
-    def to_python(self, value, path='', context=None):
+    def to_python(self, value):
         """Convert the value to a real python object"""
         return value
 
@@ -170,7 +170,7 @@ class Base(Schema):
             for field in self._fields.values():
                 field._parent = self
 
-    def get_jsonschema(self, context=None):
+    def get_jsonschema(self):
         schema = {"type": self._type}
         if self.get_attr("null"):
             schema["type"] = [self._type, "null"]
@@ -190,7 +190,7 @@ class Base(Schema):
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
                 definitions[prop.get_attr("name", name)] = \
-                    prop.get_jsonschema(context=context)
+                    prop.get_jsonschema()
             schema["definitions"] = definitions
         return schema
 

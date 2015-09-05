@@ -40,8 +40,8 @@ class String(base.Base):
     """
     _type = 'string'
 
-    def get_jsonschema(self, context=None):
-        schema = super(String, self).get_jsonschema(context=context)
+    def get_jsonschema(self):
+        schema = super(String, self).get_jsonschema()
         if self.has_attr('pattern', six.string_types):
             schema['pattern'] = self.get_attr('pattern')
         if self.has_attr('min_len', int):
@@ -84,8 +84,8 @@ class Number(base.Base):
     """
     _type = 'number'
 
-    def get_jsonschema(self, context=None):
-        schema = super(Number, self).get_jsonschema(context=context)
+    def get_jsonschema(self):
+        schema = super(Number, self).get_jsonschema()
         if self.has_attr('multiple', int):
             schema['multipleOf'] = self.get_attr('multiple')
         if self.has_attr('maximum', int):
@@ -164,12 +164,12 @@ class Array(base.Base):
     """
     _type = 'array'
 
-    def get_jsonschema(self, context=None):
-        schema = super(Array, self).get_jsonschema(context=context)
+    def get_jsonschema(self):
+        schema = super(Array, self).get_jsonschema()
         if self.has_attr('additional'):
             if isinstance(self.get_attr('additional'), base.Schema):
                 schema['additionalItems'] = \
-                    self.get_attr('additional').get_jsonschema(context=context)
+                    self.get_attr('additional').get_jsonschema()
             elif isinstance(self.get_attr('additional'), bool):
                 schema['additionalItems'] = self.get_attr('additional')
             else:
@@ -183,12 +183,12 @@ class Array(base.Base):
         if self.get_attr('items'):
             if isinstance(self.get_attr('items'), (list, tuple)):
                 schema['items'] = [
-                    s.get_jsonschema(context=context)
+                    s.get_jsonschema()
                     for s in self.get_attr('items')
                 ]
             else:
                 schema['items'] = \
-                    self.get_attr('items').get_jsonschema(context=context)
+                    self.get_attr('items').get_jsonschema()
         return schema
 
 
@@ -238,14 +238,14 @@ class Object(base.Base):
         if extend:
             self._fields.update(extend)
 
-    def get_jsonschema(self, context=None):
-        schema = super(Object, self).get_jsonschema(context=context)
+    def get_jsonschema(self):
+        schema = super(Object, self).get_jsonschema()
         if self.get_attr('additional') is not None:
             if isinstance(self.get_attr('additional'), bool):
                 schema['additionalProperties'] = self.get_attr('additional')
             else:
                 schema['additionalProperties'] = \
-                    self.get_attr('additional').get_jsonschema(context=context)
+                    self.get_attr('additional').get_jsonschema()
         if self.get_attr('min_properties') is not None:
             schema['minProperties'] = self.get_attr('min_properties')
         if self.get_attr('max_properties') is not None:
@@ -253,14 +253,12 @@ class Object(base.Base):
         if self.get_attr('patterns'):
             patterns = collections.OrderedDict()
             for reg, pattern in self.get_attr('patterns').items():
-                patterns[reg] = pattern.get_jsonschema(context=context)
+                patterns[reg] = pattern.get_jsonschema()
             schema['patternProperties'] = patterns
-        self._update_jsonschema_properties(schema, context)
+        self._update_jsonschema_properties(schema)
         return schema
 
-    def _update_jsonschema_properties(self, schema, context=None):
-        if context is None:
-            context = {}
+    def _update_jsonschema_properties(self, schema):
         required = []
         properties = collections.OrderedDict()
         for key, prop in self._fields.items():
@@ -271,7 +269,7 @@ class Object(base.Base):
             ):
                 continue
             name = prop.get_attr("name", key)
-            properties[name] = prop.get_jsonschema(context=context)
+            properties[name] = prop.get_jsonschema()
             if prop.get_attr('required'):
                 required.append(name)
         schema["properties"] = properties
@@ -283,14 +281,14 @@ class Object(base.Base):
     def fields(self):
         return self._fields
 
-    def extend(self, properties, context=None):
+    def extend(self, properties):
         """Extending the exist same with new properties.
         If you want to extending with an other schema, you should
         use the other schame `properties`
         """
         self._fields.update(properties)
 
-    def to_python(self, value, context=None):
+    def to_python(self, value):
         """Convert the value to a real python object"""
         value = value.copy()
         res = {}
@@ -299,17 +297,14 @@ class Object(base.Base):
             name = schema.get_attr('name', field)
             if name in value:
                 try:
-                    res[field] = schema.to_python(
-                        value.pop(name),
-                        context=context
-                    )
+                    res[field] = schema.to_python(value.pop(name))
                 except exceptions.ValidationErrors as ex:
                     self._update_errors_by_exception(errors, ex, name)
         self._raise_exception_when_errors(errors, value)
         res.update(value)
         return res
 
-    def to_raw(self, value, context=None):
+    def to_raw(self, value):
         """Convert the value to a JSON compatible value"""
         if value is None:
             return None
@@ -320,8 +315,7 @@ class Object(base.Base):
             schema = self._fields.get(field)
             name = schema.get_attr('name', field)
             try:
-                res[name] = \
-                    schema.to_raw(value.pop(field), context=context)
+                res[name] = schema.to_raw(value.pop(field))
             except exceptions.ValidationErrors as ex:
                 self._update_errors_by_exception(errors, ex, name)
 
@@ -347,7 +341,7 @@ class Object(base.Base):
 class Date(String):
     _attrs = {'format': 'date'}
 
-    def to_python(self, value, context=None):
+    def to_python(self, value):
         if isinstance(value, datetime.date):
             return value
         try:
@@ -360,11 +354,11 @@ class Date(String):
                 against='date'
             )
 
-    def to_raw(self, value, context=None):
+    def to_raw(self, value):
         if isinstance(value, datetime.date):
             return isodate.date_isoformat(value)
         if isinstance(value, six.string_types):
-            self.to_python(value, context=context)
+            self.to_python(value)
             return value
         raise exceptions.ValidationError(
             "Invalid date value '%s' and type %s" % (value, type(value)),
@@ -377,7 +371,7 @@ class Date(String):
 class Time(String):
     _attrs = {'format': 'time'}
 
-    def to_python(self, value, context=None):
+    def to_python(self, value):
         if isinstance(value, datetime.time):
             return value
         try:
@@ -390,11 +384,11 @@ class Time(String):
                 against='time'
             )
 
-    def to_raw(self, value, context=None):
+    def to_raw(self, value):
         if isinstance(value, datetime.time):
             return isodate.time_isoformat(value)
         if isinstance(value, six.string_types):
-            self.to_python(value, context=context)
+            self.to_python(value)
             return value
         raise exceptions.ValidationError(
             "Invalid time value '%s' and type %s" % (value, type(value)),
@@ -407,7 +401,7 @@ class Time(String):
 class DateTime(String):
     _attrs = {'format': 'datetime'}
 
-    def to_python(self, value, context=None):
+    def to_python(self, value):
         if isinstance(value, datetime.datetime):
             return value
         try:
@@ -420,11 +414,11 @@ class DateTime(String):
                 against='datetime'
             )
 
-    def to_raw(self, value, context=None):
+    def to_raw(self, value):
         if isinstance(value, datetime.datetime):
             return isodate.datetime_isoformat(value)
         if isinstance(value, six.string_types):
-            self.to_python(value, context=context)
+            self.to_python(value)
             return value
         raise exceptions.ValidationError(
             "Invalid datetime value '%s' and type %s" % (value, type(value)),
@@ -437,7 +431,7 @@ class DateTime(String):
 class Duration(String):
     _attrs = {'format': 'duration'}
 
-    def to_python(self, value, context=None):
+    def to_python(self, value):
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         if isinstance(value, datetime.timedelta):
@@ -452,7 +446,7 @@ class Duration(String):
                 against='duration'
             )
 
-    def to_raw(self, value, context=None):
+    def to_raw(self, value):
         if isinstance(value, datetime.timedelta):
             return isodate.duration_isoformat(value)
         if isinstance(value, (int, float)):
@@ -472,7 +466,7 @@ class Duration(String):
 
 class TimeDelta(Number):
 
-    def to_python(self, value, context=None):
+    def to_python(self, value):
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         if isinstance(value, datetime.timedelta):
@@ -484,7 +478,7 @@ class TimeDelta(Number):
             against='timedelta'
         )
 
-    def to_raw(self, value, context=None):
+    def to_raw(self, value):
         if isinstance(value, datetime.timedelta):
             return value.total_seconds()
         if isinstance(value, (int, float)):
@@ -504,13 +498,13 @@ class Enum(base.Base):
     :type enum: list
     """
 
-    def get_jsonschema(self, context=None):
+    def get_jsonschema(self):
         """Ensure the generic schema, remove `types`
 
         :return: Gives back the schema
         :rtype: dict
         """
-        schema = super(Enum, self).get_jsonschema(context=None)
+        schema = super(Enum, self).get_jsonschema()
         schema.pop('type')
         if self.get_attr('enum'):
             schema['enum'] = self.get_attr('enum')
@@ -519,8 +513,8 @@ class Enum(base.Base):
 
 class Ref(base.Base):
 
-    def get_jsonschema(self, context=None):
-        schema = super(Ref, self).get_jsonschema(context=context)
+    def get_jsonschema(self):
+        schema = super(Ref, self).get_jsonschema()
         schema.pop('type')
         assert not schema
         return {'$ref': '#/definitions/'+self.get_attr('ref')}

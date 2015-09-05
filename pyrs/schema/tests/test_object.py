@@ -162,7 +162,7 @@ class TestSchemaToPython(unittest.TestCase):
     def test_special_type(self):
 
         class Spec(types.String):
-            def to_python(self, src, path='', context=None):
+            def to_python(self, src):
                 if src.lower() == "yes":
                     return True
                 else:
@@ -191,7 +191,7 @@ class TestSchemaToJson(unittest.TestCase):
     def test_special_type(self):
 
         class Spec(types.String):
-            def to_raw(self, src, context=None):
+            def to_raw(self, src):
                 return "*******"
 
         class MyObject(types.Object):
@@ -362,7 +362,7 @@ class TestSchemaExclude(unittest.TestCase):
 
 class TestSchemaTagFilter(unittest.TestCase):
 
-    def test_context_exclude_initial(self):
+    def test_exclude_initial(self):
         class SubSchema(types.Object):
             name = types.String()
             password = types.String(tags=['sensitive'])
@@ -393,7 +393,7 @@ class TestSchemaTagFilter(unittest.TestCase):
             }
         )
 
-    def test_context_exclude_tags_mix(self):
+    def test_exclude_tags_mix(self):
         class SubSchema(types.Object):
             name = types.String()
             password = types.String(tags=['sensitive'])
