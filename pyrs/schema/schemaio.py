@@ -9,7 +9,6 @@ schema itself. It gives more flexibility and more extensibility.
     interface.
 """
 import datetime
-import inspect
 import json
 import six
 
@@ -28,8 +27,6 @@ class SchemaIO(object):
     """
 
     def __init__(self, schema):
-        if inspect.isclass(schema):
-            schema = schema()
         self.schema = schema
 
 
@@ -105,8 +102,6 @@ class JSONSchemaWriter(SchemaWriter):
         return json.dumps(self.extract(schema))
 
     def extract(self, schema):
-        if inspect.isclass(schema):
-            schema = schema()
         return schema.get_jsonschema()
 
 

@@ -164,6 +164,17 @@ class Array(base.Base):
     """
     _type = 'array'
 
+    def __init__(self, **attrs):
+        super(Array, self).__init__(**attrs)
+        if self.get_attr('items'):
+            if not isinstance(self.items, list):
+                self.items._parent = self
+            else:
+                for item in self.items:
+                    item._parent = self
+        if isinstance(self.get_attr('additional'), base.Schema):
+            self.additional._parent = self
+
     def get_jsonschema(self):
         schema = super(Array, self).get_jsonschema()
         if self.has_attr('additional'):
@@ -181,14 +192,10 @@ class Array(base.Base):
         if self.get_attr('unique_items') is not None:
             schema['uniqueItems'] = self.get_attr('unique_items')
         if self.get_attr('items'):
-            if isinstance(self.get_attr('items'), (list, tuple)):
-                schema['items'] = [
-                    s.get_jsonschema()
-                    for s in self.get_attr('items')
-                ]
+            if isinstance(self.items, list):
+                schema['items'] = [s.get_jsonschema() for s in self.items]
             else:
-                schema['items'] = \
-                    self.get_attr('items').get_jsonschema()
+                schema['items'] = self.items.get_jsonschema()
         return schema
 
 

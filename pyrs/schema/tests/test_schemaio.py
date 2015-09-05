@@ -95,7 +95,7 @@ class TestJSONSchemaValidator(unittest.TestCase):
         class MyObject(types.Object):
             s1 = types.String()
             s2 = types.String()
-        io = schemaio.JSONSchemaValidator(MyObject)
+        io = schemaio.JSONSchemaValidator(MyObject())
 
         with self.assertRaises(exceptions.ValidationErrors) as ctx:
             io.validate({"s1": 12, "s2": 13})
@@ -118,7 +118,7 @@ class TestJSONSchemaValidator(unittest.TestCase):
         class MyObject(types.Object):
             o1 = MyObjectMid()
 
-        io = schemaio.JSONSchemaValidator(MyObject)
+        io = schemaio.JSONSchemaValidator(MyObject())
 
         with self.assertRaises(exceptions.ValidationErrors) as ctx:
             io.validate({"o1": {"o2": {"s1": 12, "s2": "z"}}})
