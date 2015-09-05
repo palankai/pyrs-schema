@@ -94,14 +94,6 @@ class Schema(object):
             tags.update(self._parent.exclude_tags)
         return tags
 
-    @property
-    def include(self):
-        return self._attrs.get('include', None)
-
-    @property
-    def exclude(self):
-        return lib.ensure_list(self._attrs.get('exclude'))
-
     def get_jsonschema(self):
         return SchemaDict(self, self._jsonschema)
 
@@ -226,6 +218,10 @@ class Base(Schema):
 
     def get_name(self, default=None):
         return self.get_attr('name', default)
+
+    @property
+    def dialect(self):
+        return self.root._attrs.get('dialect')
 
 
 def _types_msg(instance, types, hint=''):

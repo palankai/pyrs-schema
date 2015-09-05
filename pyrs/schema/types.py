@@ -10,6 +10,7 @@ import six
 from . import base
 from . import exceptions
 from . import formats
+from . import lib
 
 
 class String(base.Base):
@@ -287,6 +288,14 @@ class Object(base.Base):
     @property
     def fields(self):
         return self._fields
+
+    @property
+    def include(self):
+        return self._attrs.get('include', None)
+
+    @property
+    def exclude(self):
+        return lib.ensure_list(self._attrs.get('exclude'))
 
     def extend(self, properties):
         """Extending the exist same with new properties.

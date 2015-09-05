@@ -226,6 +226,19 @@ class TestSchema(unittest.TestCase):
         self.assertEqual(res, {'code': {'num': 12}})
 
 
+class TestDialect(unittest.TestCase):
+
+    def test_dialect(self):
+        f = types.String(dialect='in')
+
+        class MyType(types.Object):
+            field = f
+        t = MyType(dialect='out')
+
+        self.assertEqual(t.get_attr('dialect'), 'out')
+        self.assertEqual(f.get_attr('dialect'), 'out')
+
+
 class TestConstaints(unittest.TestCase):
 
     def test_constraints(self):
