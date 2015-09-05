@@ -27,23 +27,20 @@ class Schema(object):
             self._attrs = collections.OrderedDict()
         self._attrs.update(attrs)
 
-    def get_attr(self, name, default=None, expected=None, throw=True):
-        if self.has_attr(name, expected, throw):
-            return self._attrs.get(name)
+    def get_attr(self, name, default=None, expected=None):
+        if self.has_attr(name, expected):
+            return getattr(self, name)
         return default
 
-    def has_attr(self, name, expected=None, throw=True):
-        if name not in self._attrs:
+    def has_attr(self, name, expected=None):
+        if not hasattr(self, name):
             return False
         if expected:
-            check = isinstance(self.get_attr(name), expected)
-            if check:
+            if isinstance(getattr(self, name), expected):
                 return True
-            if throw:
-                raise TypeError(
-                    'Invalid type of \'%s\', expected: %s' % expected
-                )
-            return False
+            raise TypeError(
+                'Invalid type of \'%s\', expected: %s' % expected
+            )
         return True
 
     def __getattr__(self, name):

@@ -256,6 +256,10 @@ class Object(base.Base):
             for reg, pattern in self.get_attr('patterns').items():
                 patterns[reg] = pattern.get_jsonschema(context=context)
             schema['patternProperties'] = patterns
+        self._update_jsonschema_properties(schema, context)
+        return schema
+
+    def _update_jsonschema_properties(self, schema, context=None):
         if context is None:
             context = {}
         attr_exclude_tags = lib.ensure_set(self.get_attr('exclude_tags'))
@@ -281,7 +285,7 @@ class Object(base.Base):
         schema["properties"] = properties
         if required:
             schema['required'] = sorted(required)
-        return schema
+        pass
 
     @property
     def fields(self):
