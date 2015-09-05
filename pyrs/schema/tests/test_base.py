@@ -25,6 +25,11 @@ class TestBase(unittest.TestCase):
             b = base.Base(null=True)
             self.assertEqual(b.get_jsonschema(), {'type': ['string', 'null']})
 
+    def test_id(self):
+        with mock.patch.object(base.Base, '_type', new='string'):
+            b = base.Base(id='1')
+            self.assertEqual(b.get_jsonschema(), {'type': 'string', 'id': '1'})
+
     def test_enum_validation(self):
         with mock.patch.object(base.Base, '_type', new='string'):
             b = base.Base(enum=['a', 'b', 'c'])

@@ -162,6 +162,8 @@ class Base(Schema):
         schema = {"type": self._type}
         if self.get_attr("null"):
             schema["type"] = [self._type, "null"]
+        if self.get_attr("id"):
+            schema["id"] = self.get_attr("id")
         if self.get_attr("enum"):
             schema["enum"] = self.get_attr("enum")
         if self.get_attr("format"):
