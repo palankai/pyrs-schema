@@ -17,7 +17,7 @@ class Schema(object):
     def __init__(self, _jsonschema=None, **attrs):
         self._creation_index = Schema._creation_index
         Schema._creation_index += 1
-        if _jsonschema and hasattr(self, '_jsonschema'):
+        if _jsonschema and getattr(self, '_jsonschema', None):
             raise AttributeError("The declared schema shouldn't be redefined")
         if _jsonschema:
             self._jsonschema = _jsonschema
@@ -47,7 +47,7 @@ class Schema(object):
         return True
 
     def __getattr__(self, name):
-        if name not in self._attrs:
+        if name not in (self._attrs or ()):
             raise AttributeError(
                 "'%s' object has no attribute '%s'" % (
                     self.__class__.__name__, name
