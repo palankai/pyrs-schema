@@ -97,6 +97,8 @@ class TestJSONSchemaValidator(unittest.TestCase):
             s2 = types.String()
         io = schemaio.JSONSchemaValidator(MyObject())
 
+        io.validate({"s1": '12', "s2": '13'})
+
         with self.assertRaises(exceptions.ValidationErrors) as ctx:
             io.validate({"s1": 12, "s2": 13})
         ex = ctx.exception
@@ -108,6 +110,61 @@ class TestJSONSchemaValidator(unittest.TestCase):
         self.assertEqual(ex.errors[0]['against'], 'string')
 
     def test_validation_error_of_complex(self):
+        class MyObjectBase(types.Object):
+            s1 = types.String()
+            s2 = types.String(min_len=2, pattern=r'^[0-9a-f]+$')
+
+        class MyObjectMid(types.Object):
+            o2 = MyObjectBase()
+
+        class MyObject(types.Object):
+            o1 = MyObjectMid()
+
+        io = schemaio.JSONSchemaValidator(MyObject())
+
+        with self.assertRaises(exceptions.ValidationErrors) as ctx:
+            io.validate({"o1": {"o2": {"s1": 12, "s2": "z"}}})
+        ex = ctx.exception
+        errors = sorted(ex.errors, key=lambda v: v['invalid'])
+
+        self.assertEqual(errors[0]['path'], 'o1.o2.s2')
+        self.assertEqual(errors[0]['invalid'], 'minLength')
+        self.assertEqual(errors[0]['against'], 2)
+
+        self.assertEqual(errors[1]['path'], 'o1.o2.s2')
+        self.assertEqual(errors[1]['invalid'], 'pattern')
+        self.assertEqual(errors[1]['against'], '^[0-9a-f]+$')
+
+        self.assertEqual(errors[2]['message'], "12 is not of type 'string'")
+        self.assertEqual(errors[2]['path'], 'o1.o2.s1')
+        self.assertEqual(errors[2]['value'], 12)
+        self.assertEqual(errors[2]['invalid'], 'type')
+        self.assertEqual(errors[2]['against'], 'string')
+
+    def test_constraint_validation(self):
+        class MyObject(types.Object):
+            s1 = types.String()
+            s2 = types.String()
+
+            def validate(self, value):
+                raise exceptions.ConstraintError(
+                    'Incorrect combination',
+                    'ER001'
+                )
+
+        io = schemaio.JSONSchemaValidator(MyObject())
+
+        with self.assertRaises(exceptions.ValidationErrors) as ctx:
+            io.validate({"s1": '12', "s2": '13'})
+        ex = ctx.exception
+
+        self.assertEqual(ex.errors[0]['message'], "Incorrect combination")
+        self.assertEqual(ex.errors[0]['path'], '')
+        self.assertEqual(ex.errors[0]['value'], {'s1': '12', 's2': '13'})
+        self.assertEqual(ex.errors[0]['invalid'], 'constaint')
+        self.assertEqual(ex.errors[0]['against'], 'ER001')
+
+    def test_constraint_validation_error_of_complex(self):
         class MyObjectBase(types.Object):
             s1 = types.String()
             s2 = types.String(min_len=2, pattern=r'^[0-9a-f]+$')

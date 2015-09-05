@@ -6,6 +6,14 @@ import six
 
 from . import lib
 from . import formats
+from . import exceptions
+
+
+class SchemaDict(dict):
+
+    def __init__(self, origin, *args, **kwargs):
+        super(SchemaDict, self).__init__(*args, **kwargs)
+        self.origin = origin
 
 
 class Schema(object):
@@ -79,7 +87,7 @@ class Schema(object):
         return lib.ensure_list(self._attrs.get('exclude'))
 
     def get_jsonschema(self):
-        return self._jsonschema
+        return SchemaDict(self, self._jsonschema)
 
     def get_tags(self):
         return self.get_attr('tags', set())
@@ -171,7 +179,7 @@ class Base(Schema):
                 field._parent = self
 
     def get_jsonschema(self):
-        schema = {"type": self._type}
+        schema = SchemaDict(self, {"type": self._type})
         if self.get_attr("null"):
             schema["type"] = [self._type, "null"]
         if self.get_attr("id"):
@@ -248,11 +256,21 @@ def _validate_type_draft4(validator, types, instance, schema):
     if not any(validator.is_type(instance, type) for type in types):
         yield jsonschema.ValidationError(_types_msg(instance, types))
 
+    if hasattr(schema, 'origin') and hasattr(schema.origin, 'validate'):
+        try:
+            schema.origin.validate(instance)
+        except exceptions.ConstraintError as ex:
+            yield jsonschema.ValidationError(
+                u'%s' % ex,
+                schema_path=['constaint'],
+                validator_value=ex.against
+            )
+
 
 def _make_validator(schema):
     format_checker = jsonschema.FormatChecker(formats.draft4_format_checkers)
     validator_funcs = jsonschema.Draft4Validator.VALIDATORS
-    validator_funcs[u'type'] = _validate_type_draft4
+    validator_funcs['type'] = _validate_type_draft4
     meta_schema = jsonschema.Draft4Validator.META_SCHEMA
     validator_cls = jsonschema.validators.create(
         meta_schema=meta_schema,

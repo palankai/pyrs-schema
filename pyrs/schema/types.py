@@ -524,4 +524,6 @@ class Ref(base.Base):
         schema = super(Ref, self).get_jsonschema()
         schema.pop('type')
         assert not schema
-        return {'$ref': '#/definitions/'+self.get_attr('ref')}
+        return base.SchemaDict(
+            self, {'$ref': '#/definitions/'+self.get_attr('ref')}
+        )

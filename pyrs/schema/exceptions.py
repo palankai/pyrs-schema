@@ -29,6 +29,13 @@ class ParseError(SchemaError):
         super(ParseError, self).__init__(message, value, error)
 
 
+class ConstraintError(Exception):
+
+    def __init__(self, message, against):
+        super(ConstraintError, self).__init__(message)
+        self.against = against
+
+
 class ValidationErrors(SchemaError):
     """
     Cover the validation errors.
