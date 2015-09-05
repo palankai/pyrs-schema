@@ -11,6 +11,8 @@ from . import formats
 class Schema(object):
     _creation_index = 0
     _attrs = None
+    _fields = None
+    _parent = None
 
     def __init__(self, _jsonschema=None, **attrs):
         self._creation_index = Schema._creation_index
@@ -43,6 +45,26 @@ class Schema(object):
                 )
             return False
         return True
+
+    def __getattr__(self, name):
+        if name not in self._attrs:
+            raise AttributeError(
+                "'%s' object has no attribute '%s'" % (
+                    self.__class__.__name__, name
+                )
+            )
+        return self._attrs[name]
+
+    @property
+    def parent(self):
+        return self._parent or self
+
+    @property
+    def root(self):
+        root = self
+        while root._parent:
+            root = root._parent
+        return root
 
     def get_jsonschema(self, context=None):
         return self._jsonschema
@@ -109,7 +131,6 @@ class DeclarativeMetaclass(type):
             )
         else:
             attrs[name] = collections.OrderedDict(current_fields) or None
-        pass
 
     @classmethod
     def get_inherited(mcls, cls, name, base, remove_if_none=False):
@@ -130,6 +151,12 @@ class Base(Schema):
     _type = None
     _attrs = None
     _definitions = None
+
+    def __init__(self, **attrs):
+        super(Base, self).__init__(**attrs)
+        if self._fields:
+            for field in self._fields.values():
+                field._parent = self
 
     def get_jsonschema(self, context=None):
         schema = {"type": self._type}

@@ -97,6 +97,54 @@ class TestDefault(unittest.TestCase):
         )
 
 
+class TestFields(unittest.TestCase):
+
+    def test_fields(self):
+        field = types.String(name='example')
+
+        class MySchema(types.Object):
+            name = field
+
+        t = MySchema()
+        self.assertEqual(t.fields['name'], field)
+        self.assertIsNone(t._parent)
+        self.assertEqual(field._parent, t)
+
+
+class TestParentAndRoot(unittest.TestCase):
+
+    def test_parents(self):
+        field = types.String(name='example')
+
+        class MidSchema(types.Object):
+            name = field
+
+        midschema = MidSchema()
+
+        class MySchema(types.Object):
+            name = midschema
+
+        t = MySchema()
+        self.assertEqual(t.parent, t)
+        self.assertEqual(field.parent, midschema)
+        self.assertEqual(midschema.parent, t)
+
+        self.assertEqual(t.root, t)
+        self.assertEqual(field.root, t)
+        self.assertEqual(midschema.root, t)
+
+
+class TestAttributes(unittest.TestCase):
+
+    def test_attributes(self):
+        field = types.String(spec_attr='spec')
+
+        self.assertEqual(field.spec_attr, 'spec')
+
+        with self.assertRaises(AttributeError):
+            field.spec_attr2
+
+
 class TestSchema(unittest.TestCase):
 
     def test_creation_index(self):
