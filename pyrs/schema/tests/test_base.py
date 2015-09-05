@@ -1,8 +1,7 @@
 import unittest
 
-import mock
-
 from .. import base
+from .. import exceptions
 from .. import types
 
 
@@ -14,28 +13,30 @@ class TestBase(unittest.TestCase):
         self.assertEqual(b.get_attr('attr'), 1)
 
     def test_get_jsonschema(self):
-        with mock.patch.object(base.Base, '_type', new='string'):
-            b = base.Base()
-            s = b.get_jsonschema()
-            self.assertEqual(s, {'type': 'string'})
+        b = base.Base(type='string')
+        s = b.get_jsonschema()
+        self.assertEqual(s, {'type': 'string'})
         self.assertIsNone(base.Base._type)
 
     def test_null(self):
-        with mock.patch.object(base.Base, '_type', new='string'):
-            b = base.Base(null=True)
-            self.assertEqual(b.get_jsonschema(), {'type': ['string', 'null']})
+        b = base.Base(null=True, type='string')
+        self.assertEqual(b.get_jsonschema(), {'type': ['string', 'null']})
+
+    def test_null_with_list(self):
+        b = base.Base(null=True, type=['string', 'integer'])
+        self.assertEqual(
+            b.get_jsonschema(), {'type': ['string', 'integer', 'null']}
+        )
 
     def test_id(self):
-        with mock.patch.object(base.Base, '_type', new='string'):
-            b = base.Base(id='1')
-            self.assertEqual(b.get_jsonschema(), {'type': 'string', 'id': '1'})
+        b = base.Base(id='1', type='string')
+        self.assertEqual(b.get_jsonschema(), {'type': 'string', 'id': '1'})
 
     def test_enum_validation(self):
-        with mock.patch.object(base.Base, '_type', new='string'):
-            b = base.Base(enum=['a', 'b', 'c'])
-            self.assertEqual(
-                b.get_jsonschema(), {'type': 'string', 'enum': ['a', 'b', 'c']}
-            )
+        b = base.Base(enum=['a', 'b', 'c'], type='string')
+        self.assertEqual(
+            b.get_jsonschema(), {'type': 'string', 'enum': ['a', 'b', 'c']}
+        )
 
     def test_default_attrs(self):
         class MyType(base.Base):
@@ -195,18 +196,6 @@ class TestSchema(unittest.TestCase):
             }
         })
 
-    def test_redeclaration_raise_error(self):
-        class MySchema(base.Schema):
-            _jsonschema = {'type': 'string'}
-
-        with self.assertRaises(AttributeError):
-            MySchema({
-                'type': 'object',
-                'properties': {
-                    'num': {'type': 'integer'}
-                }
-            })
-
     def test_deserialize(self):
         class MySchema(base.Schema):
             _schema = {
@@ -235,3 +224,50 @@ class TestSchema(unittest.TestCase):
         s = MyObject()
         res = s.to_python({'code': {'num': 12}})
         self.assertEqual(res, {'code': {'num': 12}})
+
+
+class TestConstaints(unittest.TestCase):
+
+    def test_constraints(self):
+        class MyType(base.Base):
+            _type = 'string'
+
+            class Attrs:
+                constraints = {'code': 'code should be code'}
+        t = MyType()
+
+        self.assertEqual(
+            t.get_jsonschema(), {
+                'type': 'string',
+                'constraints': {
+                    'code': 'code should be code'
+                }
+            }
+        )
+
+    def test_declared_constraints(self):
+        class MyType(base.Base):
+            _type = 'string'
+
+            @base.constraint('evenlength', 'Length should be even')
+            def validate_evenlength(self, value):
+                if len(value) % 2 != 0:
+                    raise exceptions.ConstraintError("'%s' length is not even")
+
+        t = MyType()
+
+        self.assertEqual(
+            t.validate_evenlength._constraint, 'evenlength'
+        )
+        self.assertEqual(
+            t.validate_evenlength._constraint_hint, 'Length should be even'
+        )
+
+        self.assertEqual(
+            t.get_jsonschema(), {
+                'type': 'string',
+                'constraints': {
+                    'evenlength': 'Length should be even'
+                }
+            }
+        )

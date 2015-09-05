@@ -1,12 +1,12 @@
 import collections
 import datetime
+import inspect
 
 import jsonschema
 import six
 
-from . import lib
 from . import formats
-from . import exceptions
+from . import lib
 
 
 class SchemaDict(dict):
@@ -14,6 +14,14 @@ class SchemaDict(dict):
     def __init__(self, origin, *args, **kwargs):
         super(SchemaDict, self).__init__(*args, **kwargs)
         self.origin = origin
+
+
+def constraint(code, hint):
+    def decorate(func):
+        func._constraint = code
+        func._constraint_hint = hint
+        return func
+    return decorate
 
 
 class Schema(object):
@@ -25,15 +33,23 @@ class Schema(object):
     def __init__(self, _jsonschema=None, **attrs):
         self._creation_index = Schema._creation_index
         Schema._creation_index += 1
-        if _jsonschema and getattr(self, '_jsonschema', None):
-            raise AttributeError("The declared schema shouldn't be redefined")
         if _jsonschema:
             self._jsonschema = _jsonschema
-        if self.__class__._attrs is not None:
-            self._attrs = self.__class__._attrs.copy()
-        else:
-            self._attrs = collections.OrderedDict()
-        self._attrs.update(attrs)
+        self._attrs = dict(self._attrs or {}, **attrs)
+
+        self._validators = self._get_validators()
+
+        if self._validators and 'constraints' not in self._attrs:
+            self._attrs['constraints'] = dict([
+                (v._constraint, v._constraint_hint)
+                for v in self._validators.values()
+            ])
+
+    def _get_validators(self):
+        validators = inspect.getmembers(
+            self, lambda x: hasattr(x, '_constraint')
+        )
+        return dict([(v._constraint, v) for n, v in validators])
 
     def get_attr(self, name, default=None, expected=None):
         if self.has_attr(name, expected):
@@ -177,11 +193,15 @@ class Base(Schema):
         if self._fields:
             for field in self._fields.values():
                 field._parent = self
+        if self._definitions:
+            for field in self._definitions.values():
+                field._parent = self
 
     def get_jsonschema(self):
-        schema = SchemaDict(self, {"type": self._type})
+        _type = self.get_attr('type', self._type)
+        schema = SchemaDict(self, {"type": _type})
         if self.get_attr("null"):
-            schema["type"] = [self._type, "null"]
+            schema["type"] = lib.ensure_list(_type) + ["null"]
         if self.get_attr("id"):
             schema["id"] = self.get_attr("id")
         if self.get_attr("enum"):
@@ -194,6 +214,8 @@ class Base(Schema):
             schema["description"] = self.get_attr("description")
         if self.get_attr("default"):
             schema["default"] = self.get_attr("default")
+        if self.get_attr("constraints"):
+            schema["constraints"] = self.get_attr("constraints")
         if self._definitions:
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():
@@ -256,14 +278,13 @@ def _validate_type_draft4(validator, types, instance, schema):
     if not any(validator.is_type(instance, type) for type in types):
         yield jsonschema.ValidationError(_types_msg(instance, types))
 
-    if hasattr(schema, 'origin') and hasattr(schema.origin, 'validate'):
-        try:
-            schema.origin.validate(instance)
-        except exceptions.ConstraintError as ex:
+
+def _validate_constraints(validator, constraints, instance, schema):
+    for constraint, message in constraints.items():
+        for ex in (schema.origin._validators[constraint](instance) or ()):
             yield jsonschema.ValidationError(
-                u'%s' % ex,
-                schema_path=['constaint'],
-                validator_value=ex.against
+                ex.message or message,
+                validator_value=ex.against or constraint
             )
 
 
@@ -271,6 +292,7 @@ def _make_validator(schema):
     format_checker = jsonschema.FormatChecker(formats.draft4_format_checkers)
     validator_funcs = jsonschema.Draft4Validator.VALIDATORS
     validator_funcs['type'] = _validate_type_draft4
+    validator_funcs['constraints'] = _validate_constraints
     meta_schema = jsonschema.Draft4Validator.META_SCHEMA
     validator_cls = jsonschema.validators.create(
         meta_schema=meta_schema,

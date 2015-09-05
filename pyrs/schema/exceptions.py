@@ -31,8 +31,9 @@ class ParseError(SchemaError):
 
 class ConstraintError(Exception):
 
-    def __init__(self, message, against):
+    def __init__(self, message=None, against=None):
         super(ConstraintError, self).__init__(message)
+        self.message = message
         self.against = against
 
 
