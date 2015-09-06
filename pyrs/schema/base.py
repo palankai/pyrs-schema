@@ -16,6 +16,16 @@ class SchemaDict(dict):
         self.origin = origin
 
 
+class Set(set):
+    def __init__(self, items=None):
+        if not items:
+            super(Set, self).__init__()
+        elif isinstance(items, (list, tuple, set)):
+            super(Set, self).__init__(items)
+        else:
+            super(Set, self).__init__([items])
+
+
 def constraint(code, hint):
     def decorate(func):
         func._constraint = code
@@ -37,6 +47,10 @@ class Schema(object):
             self._jsonschema = _jsonschema
         self._attrs = dict(self._attrs or {}, **attrs)
 
+        self._attrs['hidden'] = self._attrs.get('hidden', False)
+        self._attrs['tags'] = Set(self._attrs.get('tags'))
+        self._attrs['exclude'] = Set(self._attrs.get('exclude'))
+        self._attrs['exclude_tags'] = Set(self._attrs.get('exclude_tags'))
         self._validators = self._get_validators()
 
         if self._validators and 'constraints' not in self._attrs:
@@ -76,6 +90,9 @@ class Schema(object):
             )
         return self._attrs[name]
 
+    def __contains__(self, name):
+        return name in self._attrs
+
     @property
     def parent(self):
         return self._parent or self
@@ -89,10 +106,34 @@ class Schema(object):
 
     @property
     def exclude_tags(self):
-        tags = lib.ensure_set(self._attrs.get('exclude_tags'))
+        tags = self._attrs['exclude_tags'].copy()
         if self._parent:
             tags.update(self._parent.exclude_tags)
         return tags
+
+    @property
+    def dialect(self):
+        return self.root._attrs.get('dialect')
+
+    @property
+    def is_excluded(self):
+        return self.fieldname in self.parent.exclude or \
+            self.tags & self.exclude_tags or \
+            not self.is_exclusive or \
+            self.hidden
+
+    @property
+    def exclusive(self):
+        return self._attrs.get('exclusive')
+
+    @property
+    def is_exclusive(self):
+        exclusive = self.parent.exclusive
+        return exclusive is None or self.fieldname in exclusive
+
+    @property
+    def fieldname(self):
+        return self._attrs.get('fieldname')
 
     def getter(self, func):
         self._attrs['getvalue'] = func
@@ -104,16 +145,6 @@ class Schema(object):
 
     def get_jsonschema(self):
         return SchemaDict(self, self._jsonschema)
-
-    def get_tags(self):
-        return self.get_attr('tags', set())
-
-    def has_tags(self, tags):
-        if not isinstance(tags, (list, tuple, set)):
-            tags = {tags}
-        if set(self.get_tags()) & set(tags):
-            return True
-        return False
 
     def to_raw(self, value):
         """Convert the value to a dict of primitives"""
@@ -224,13 +255,6 @@ class Base(Schema):
                     prop.get_jsonschema()
             schema["definitions"] = definitions
         return schema
-
-    def get_name(self, default=None):
-        return self.get_attr('name', default)
-
-    @property
-    def dialect(self):
-        return self.root._attrs.get('dialect')
 
 
 def _types_msg(instance, types, hint=''):

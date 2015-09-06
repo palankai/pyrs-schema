@@ -342,9 +342,9 @@ class TestSchemaExtend(unittest.TestCase):
         )
 
 
-class TestSchemaInclude(unittest.TestCase):
+class TestExclusive(unittest.TestCase):
 
-    def test_partial(self):
+    def setUp(self):
         class MyObject(types.Object):
             num = types.Integer()
             string = types.String()
@@ -352,9 +352,11 @@ class TestSchemaInclude(unittest.TestCase):
             class Attrs:
                 additional = False
 
-        t = MyObject(exclusive=['num'])
+        self.schema = MyObject(exclusive=['num'])
+
+    def test_does_not_show_up_in_schema(self):
         self.assertEqual(
-            t.get_jsonschema(),
+            self.schema.get_jsonschema(),
             {
                 "type": "object",
                 "properties": {
@@ -362,6 +364,11 @@ class TestSchemaInclude(unittest.TestCase):
                 },
                 'additionalProperties': False,
             }
+        )
+
+    def test_does_not_show_up_in_to_raw(self):
+        self.assertEqual(
+            self.schema.to_raw({'num': 12, 'string': 'str'}), {'num': 12}
         )
 
 

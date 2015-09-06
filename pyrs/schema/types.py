@@ -10,7 +10,6 @@ import six
 from . import base
 from . import exceptions
 from . import formats
-from . import lib
 
 
 class String(base.Base):
@@ -270,12 +269,7 @@ class Object(base.Base):
         required = []
         properties = collections.OrderedDict()
         for key, prop in self._fields.items():
-            if(
-                key in self.exclude or
-                self.exclusive is not None and key not in self.exclusive or
-                prop.has_tags(self.exclude_tags) or
-                prop.get_attr('hidden')
-            ):
+            if prop.is_excluded:
                 continue
             name = prop.get_attr("name", key)
             properties[name] = prop.get_jsonschema()
@@ -289,14 +283,6 @@ class Object(base.Base):
     @property
     def fields(self):
         return self._fields
-
-    @property
-    def exclusive(self):
-        return self._attrs.get('exclusive', None)
-
-    @property
-    def exclude(self):
-        return lib.ensure_list(self._attrs.get('exclude'))
 
     def extend(self, properties):
         """Extending the exist same with new properties.
@@ -337,24 +323,26 @@ class Object(base.Base):
         res = {}
         src = value.copy()
         errors = []
-        for field in list(set(src) & set(self._fields)):
-            schema = self._fields.get(field)
-            name = schema.get_attr('name', field)
-            if schema.get_attr('hidden'):
-                del src[field]
+        for fieldname in list(set(src) & set(self._fields)):
+            field = self._fields.get(fieldname)
+            name = field.get_attr('name', fieldname)
+            if field.get_attr('hidden'):
+                del src[fieldname]
                 continue
             try:
-                res[name] = schema.to_raw(src.pop(field))
+                res[name] = field.to_raw(src.pop(fieldname))
             except exceptions.ValidationErrors as ex:
                 self._update_errors_by_exception(errors, ex, name)
         res.update(src)
-        for field in self._fields:
-            schema = self._fields.get(field)
-            name = schema.get_attr('name', field)
-            if name not in res and schema.has_attr('fallback'):
-                res[name] = schema.get_attr('fallback')
-            if schema.has_attr('getvalue'):
-                res[name] = schema.getvalue(schema, value)
+        for fieldname in self._fields:
+            field = self._fields.get(fieldname)
+            name = field.get_attr('name', fieldname)
+            if name not in res and field.has_attr('fallback'):
+                res[name] = field.get_attr('fallback')
+            if field.has_attr('getvalue'):
+                res[name] = field.getvalue(field, value)
+            if field.is_excluded and name in res:
+                del res[name]
 
         self._raise_exception_when_errors(errors, value)
         return res
