@@ -284,3 +284,49 @@ class TestConstaints(unittest.TestCase):
                 }
             }
         )
+
+
+class TestMixin(unittest.TestCase):
+
+    def test_mixin(self):
+        class MyType(base.Base):
+            pass
+
+        class MyTypeSubclass(MyType):
+            pass
+
+        @MyType.mixin
+        class MyMixin(object):
+            _mymixin_field = '123'
+
+            def mymethod(self):
+                return self
+
+            @property
+            def myproperty(self):
+                return self
+
+        m = MyType()
+        ms = MyTypeSubclass()
+
+        self.assertEqual(m._mymixin_field, '123')
+        self.assertEqual(ms._mymixin_field, '123')
+
+        self.assertEqual(m.mymethod(), m)
+        self.assertEqual(ms.mymethod(), ms)
+
+        self.assertEqual(m.myproperty, m)
+        self.assertEqual(ms.myproperty, ms)
+
+    def test_overwrite(self):
+        class MyType(base.Base):
+            _original_field = '123'
+            pass
+
+        @MyType.mixin
+        class MyMixin(object):
+            _original_field = '345'
+
+        m = MyType()
+
+        self.assertEqual(m._original_field, '345')

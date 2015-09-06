@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import collections
 import datetime
 import inspect
@@ -81,18 +83,6 @@ class Schema(object):
             )
         return True
 
-    def __getattr__(self, name):
-        if name not in (self._attrs or ()):
-            raise AttributeError(
-                "'%s' object has no attribute '%s'" % (
-                    self.__class__.__name__, name
-                )
-            )
-        return self._attrs[name]
-
-    def __contains__(self, name):
-        return name in self._attrs
-
     @property
     def parent(self):
         return self._parent or self
@@ -153,6 +143,28 @@ class Schema(object):
     def to_python(self, value):
         """Convert the value to a real python object"""
         return value
+
+    @classmethod
+    def mixin(cls, src):
+        for name, member in inspect.getmembers(src):
+            if name.startswith('__'):
+                continue
+            if inspect.ismethod(member):
+                member = member.__func__
+            setattr(cls, name, member)
+        return src
+
+    def __getattr__(self, name):
+        if name not in (self._attrs or ()):
+            raise AttributeError(
+                "'%s' object has no attribute '%s'" % (
+                    self.__class__.__name__, name
+                )
+            )
+        return self._attrs[name]
+
+    def __contains__(self, name):
+        return name in self._attrs
 
     def __eq__(self, other):
         if isinstance(other, dict):
