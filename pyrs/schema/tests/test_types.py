@@ -398,6 +398,15 @@ class TestPassword(unittest.TestCase):
         self.assertEqual(s, {'type': 'string'})
 
 
+class TestEmail(unittest.TestCase):
+
+    def test_jsonschema(self):
+        s = types.Email()
+
+        s = s.get_jsonschema()
+        self.assertEqual(s, {'type': 'string', 'format': 'email'})
+
+
 class TestObject(unittest.TestCase):
 
     def test_serialize(self):

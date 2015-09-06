@@ -535,6 +535,10 @@ class Password(String):
         return '*' * expected_len
 
 
+class Email(String):
+    _attrs = {'format': 'email'}
+
+
 class Enum(Any):
     """JSON generic enum class
 
