@@ -94,6 +94,14 @@ class Schema(object):
             tags.update(self._parent.exclude_tags)
         return tags
 
+    def getter(self, func):
+        self._attrs['getvalue'] = func
+        return func
+
+    def setter(self, func):
+        self._attrs['setvalue'] = func
+        return func
+
     def get_jsonschema(self):
         return SchemaDict(self, self._jsonschema)
 
@@ -150,6 +158,7 @@ class DeclarativeMetaclass(type):
         current_fields = []
         for key, value in list(attrs.items()):
             if isinstance(value, base):
+                value._attrs['fieldname'] = key
                 current_fields.append((key, value))
                 attrs.pop(key)
         current_fields.sort(key=lambda x: x[1]._creation_index)

@@ -244,7 +244,7 @@ class Object(base.Base):
     def __init__(self, extend=None, **attrs):
         super(Object, self).__init__(**attrs)
         if extend:
-            self._fields.update(extend)
+            self.extend(extend)
 
     def get_jsonschema(self):
         schema = super(Object, self).get_jsonschema()
@@ -273,7 +273,8 @@ class Object(base.Base):
             if(
                 key in self.exclude or
                 self.include is not None and key not in self.include or
-                prop.has_tags(self.exclude_tags)
+                prop.has_tags(self.exclude_tags) or
+                prop.get_attr('hidden')
             ):
                 continue
             name = prop.get_attr("name", key)
@@ -302,6 +303,9 @@ class Object(base.Base):
         If you want to extending with an other schema, you should
         use the other schame `properties`
         """
+        for fieldname, prop in properties.items():
+            prop._parent = self
+            prop._attrs['fieldname'] = fieldname
         self._fields.update(properties)
 
     def to_python(self, value):
@@ -316,8 +320,14 @@ class Object(base.Base):
                     res[field] = schema.to_python(value.pop(name))
                 except exceptions.ValidationErrors as ex:
                     self._update_errors_by_exception(errors, ex, name)
-        self._raise_exception_when_errors(errors, value)
         res.update(value)
+        for field in self._fields:
+            schema = self._fields.get(field)
+            if field not in res and schema.has_attr('fallback'):
+                res[field] = schema.get_attr('fallback')
+            if schema.has_attr('setvalue'):
+                res[field] = schema.setvalue(schema, res)
+        self._raise_exception_when_errors(errors, value)
         return res
 
     def to_raw(self, value):
@@ -325,18 +335,28 @@ class Object(base.Base):
         if value is None:
             return None
         res = {}
-        value = value.copy()
+        src = value.copy()
         errors = []
-        for field in list(set(value) & set(self._fields)):
+        for field in list(set(src) & set(self._fields)):
             schema = self._fields.get(field)
             name = schema.get_attr('name', field)
+            if schema.get_attr('hidden'):
+                del src[field]
+                continue
             try:
-                res[name] = schema.to_raw(value.pop(field))
+                res[name] = schema.to_raw(src.pop(field))
             except exceptions.ValidationErrors as ex:
                 self._update_errors_by_exception(errors, ex, name)
+        res.update(src)
+        for field in self._fields:
+            schema = self._fields.get(field)
+            name = schema.get_attr('name', field)
+            if name not in res and schema.has_attr('fallback'):
+                res[name] = schema.get_attr('fallback')
+            if schema.has_attr('getvalue'):
+                res[name] = schema.getvalue(schema, value)
 
         self._raise_exception_when_errors(errors, value)
-        res.update(value)
         return res
 
     def _update_errors_by_exception(self, errors, ex, name):

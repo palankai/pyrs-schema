@@ -328,3 +328,139 @@ class TestJSONFormReader(unittest.TestCase):
             'arr': [1, 2, 'hi'],
             'unknown': '{"any": "value"}'
         })
+
+
+class TestHiddenFields(unittest.TestCase):
+
+    def test_hidden_doesnt_show_up_on_schema(self):
+        class MySchema(types.Object):
+            fullname = types.String()
+            email = types.String(hidden=True)
+
+        s = MySchema(additional=None)
+        self.assertEqual(
+            s.get_jsonschema(),
+            {
+                'type': 'object',
+                'properties': {'fullname': {'type': 'string'}},
+            }
+        )
+
+    def test_hidden_doesnt_show_up_on_raw(self):
+        class MySchema(types.Object):
+            fullname = types.String()
+            email = types.String(hidden=True)
+
+        s = MySchema(additional=None)
+        self.assertEqual(
+            s.to_raw({'fullname': 'name', 'email': 'name@exmaple.com'}),
+            {'fullname': 'name'}
+        )
+
+
+class TestSetter(unittest.TestCase):
+
+    def test_setter(self):
+        class MySchema(types.Object):
+            fullname = types.String(name='FullName')
+            email = types.String(hidden=True, name='Email')
+
+            @email.setter
+            def set_email(self, data):
+                name = self.fieldname
+                return data['fullname']+'.'+name+'@example.com'
+
+        s = MySchema(additional=None)
+        self.assertEqual(
+            s.to_python({'FullName': 'name'}),
+            {'fullname': 'name', 'email': 'name.email@example.com'}
+        )
+
+
+    def test_setter_overwrite(self):
+        class MySchema(types.Object):
+            fullname = types.String(name='FullName')
+            email = types.String(name='Email')
+
+            @email.setter
+            def set_email(self, data):
+                name = self.fieldname
+                return data['fullname']+'.'+data[name]+'.'+name+'@example.com'
+
+        s = MySchema(additional=None)
+        self.assertEqual(
+            s.to_python({'FullName': 'name', 'Email': '123'}),
+            {'fullname': 'name', 'email': 'name.123.email@example.com'}
+        )
+
+
+class TestGetter(unittest.TestCase):
+
+    def test_getter(self):
+        class MySchema(types.Object):
+            fullname = types.String(name='FullName')
+            email = types.String(name='Email')
+
+            @email.getter
+            def get_email(self, data):
+                name = self.fieldname
+                return data['fullname']+'.'+name+'@example.com'
+
+        s = MySchema(additional=None)
+        self.assertEqual(
+            s.to_raw({'fullname': 'name'}),
+            {'FullName': 'name', 'Email': 'name.email@example.com'}
+        )
+
+    def test_getter_overwrite(self):
+        class MySchema(types.Object):
+            fullname = types.String(name='FullName')
+            email = types.String(name='Email')
+
+            @email.getter
+            def get_email(self, data):
+                name = self.fieldname
+                return data['fullname']+'.'+name+'@'+data[name]
+
+        s = MySchema(additional=None)
+        self.assertEqual(
+            s.to_raw({'fullname': 'name', 'email': 'example.com'}),
+            {'FullName': 'name', 'Email': 'name.email@example.com'}
+        )
+
+class TestFallback(unittest.TestCase):
+
+    def setUp(self):
+        class MySchema(types.Object):
+            fullname = types.String(name='FullName')
+            email = types.String(name='Email', fallback='default@example.com')
+
+        self.schema = MySchema(additional=None)
+
+    def test_to_raw(self):
+        self.assertEqual(
+            self.schema.to_raw({'fullname': 'name'}),
+            {'FullName': 'name', 'Email': 'default@example.com'}
+        )
+
+    def test_to_raw_does_not_overwrite(self):
+        self.assertEqual(
+            self.schema.to_raw(
+                {'fullname': 'name', 'email': 'user@example.com'}
+            ),
+            {'FullName': 'name', 'Email': 'user@example.com'}
+        )
+
+    def test_to_python(self):
+        self.assertEqual(
+            self.schema.to_python({'FullName': 'name'}),
+            {'fullname': 'name', 'email': 'default@example.com'}
+        )
+
+    def test_to_python_does_not_overwrite(self):
+        self.assertEqual(
+            self.schema.to_python(
+                {'FullName': 'name', 'Email': 'user@example.com'}
+            ),
+            {'fullname': 'name', 'email': 'user@example.com'}
+        )

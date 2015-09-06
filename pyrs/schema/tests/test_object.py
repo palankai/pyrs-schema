@@ -263,6 +263,31 @@ class TestSchemaPattern(unittest.TestCase):
         )
 
 
+class TestObjectFields(unittest.TestCase):
+
+    def test_procedural_extend(self):
+        field = types.String()
+        byarg = types.String()
+        extend = types.String()
+
+        class MyObject(types.Object):
+            basefield = field
+
+        t = MyObject(extend={'byarg': byarg})
+        t.extend({
+            'extend': extend
+        })
+
+        self.assertEqual(field.parent, t)
+        self.assertEqual(field.fieldname, 'basefield')
+
+        self.assertEqual(byarg.parent, t)
+        self.assertEqual(byarg.fieldname, 'byarg')
+
+        self.assertEqual(extend.parent, t)
+        self.assertEqual(extend.fieldname, 'extend')
+
+
 class TestSchemaExtend(unittest.TestCase):
 
     def test_procedural_extend(self):
@@ -274,8 +299,9 @@ class TestSchemaExtend(unittest.TestCase):
                 additional = False
 
         t = MyObject()
+        extra = types.String()
         t.extend({
-            'title': types.String()
+            'title': extra
         })
 
         self.assertEqual(
@@ -299,7 +325,9 @@ class TestSchemaExtend(unittest.TestCase):
             class Attrs:
                 additional = False
 
-        t = MyObject(extend={'title': types.String()})
+        extra = types.String()
+        t = MyObject(extend={'title': extra})
+
         self.assertEqual(
             t.get_jsonschema(),
             {
