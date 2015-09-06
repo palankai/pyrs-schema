@@ -272,7 +272,7 @@ class Object(base.Base):
         for key, prop in self._fields.items():
             if(
                 key in self.exclude or
-                self.include is not None and key not in self.include or
+                self.exclusive is not None and key not in self.exclusive or
                 prop.has_tags(self.exclude_tags) or
                 prop.get_attr('hidden')
             ):
@@ -291,8 +291,8 @@ class Object(base.Base):
         return self._fields
 
     @property
-    def include(self):
-        return self._attrs.get('include', None)
+    def exclusive(self):
+        return self._attrs.get('exclusive', None)
 
     @property
     def exclude(self):

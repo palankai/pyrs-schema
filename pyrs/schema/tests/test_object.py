@@ -352,7 +352,7 @@ class TestSchemaInclude(unittest.TestCase):
             class Attrs:
                 additional = False
 
-        t = MyObject(include=['num'])
+        t = MyObject(exclusive=['num'])
         self.assertEqual(
             t.get_jsonschema(),
             {
