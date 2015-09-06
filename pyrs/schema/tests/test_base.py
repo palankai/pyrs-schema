@@ -235,8 +235,8 @@ class TestDialect(unittest.TestCase):
             field = f
         t = MyType(dialect='out')
 
-        self.assertEqual(t.get_attr('dialect'), 'out')
-        self.assertEqual(f.get_attr('dialect'), 'out')
+        self.assertEqual(t.get_attr('dialect'), {'out'})
+        self.assertEqual(f.get_attr('dialect'), {'out'})
 
 
 class TestConstaints(unittest.TestCase):

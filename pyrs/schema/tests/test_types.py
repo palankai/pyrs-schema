@@ -373,6 +373,31 @@ class TestTimeDelta(unittest.TestCase):
             self.schema.to_raw(datetime.date(2012, 3, 11))
 
 
+class TestPassword(unittest.TestCase):
+
+    def test_to_raw(self):
+        s = types.Password()
+
+        self.assertEqual(s.to_raw('secret'), '********')
+
+    def test_to_raw_with_length(self):
+        s1 = types.Password(min_len=10)
+        s2 = types.Password(max_len=5)
+        s3 = types.Password(min_len=3, max_len=6)
+        s4 = types.Password(min_len=3, max_len=10)
+
+        self.assertEqual(s1.to_raw('secret'), '*' * 10)
+        self.assertEqual(s2.to_raw('secret'), '*' * 5)
+        self.assertEqual(s3.to_raw('secret'), '*' * 6)
+        self.assertEqual(s4.to_raw('secret'), '*' * 8)  # normal 8
+
+    def test_jsonschema(self):
+        s = types.Password(pattern=r'[0-9]+', dialect=['output'])
+
+        s = s.get_jsonschema()
+        self.assertEqual(s, {'type': 'string'})
+
+
 class TestObject(unittest.TestCase):
 
     def test_serialize(self):

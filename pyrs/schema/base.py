@@ -50,6 +50,7 @@ class Schema(object):
         self._attrs = dict(self._attrs or {}, **attrs)
 
         self._attrs['hidden'] = self._attrs.get('hidden', False)
+        self._attrs['dialect'] = Set(self._attrs.get('dialect'))
         self._attrs['tags'] = Set(self._attrs.get('tags'))
         self._attrs['exclude'] = Set(self._attrs.get('exclude'))
         self._attrs['exclude_tags'] = Set(self._attrs.get('exclude_tags'))

@@ -519,6 +519,22 @@ class TimeDelta(Number):
         )
 
 
+class Password(String):
+
+    def get_jsonschema(self):
+        if 'output' in self.dialect:
+            # make sure the output validation does not fail
+            return {'type': 'string'}
+        schema = super(Password, self).get_jsonschema()
+        return schema
+
+    def to_raw(self, value):
+        minlen = self.get_attr('min_len', 0)
+        maxlen = self.get_attr('max_len', 99)
+        expected_len = max(min(8, maxlen), minlen)
+        return '*' * expected_len
+
+
 class Enum(Any):
     """JSON generic enum class
 
