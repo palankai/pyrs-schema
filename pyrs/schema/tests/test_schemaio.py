@@ -376,7 +376,6 @@ class TestSetter(unittest.TestCase):
             {'fullname': 'name', 'email': 'name.email@example.com'}
         )
 
-
     def test_setter_overwrite(self):
         class MySchema(types.Object):
             fullname = types.String(name='FullName')
@@ -427,6 +426,7 @@ class TestGetter(unittest.TestCase):
             s.to_raw({'fullname': 'name', 'email': 'example.com'}),
             {'FullName': 'name', 'Email': 'name.email@example.com'}
         )
+
 
 class TestFallback(unittest.TestCase):
 
