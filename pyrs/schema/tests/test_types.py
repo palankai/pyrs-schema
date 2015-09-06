@@ -5,6 +5,15 @@ from .. import exceptions
 from .. import types
 
 
+class TestAny(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.Any()
+
+    def test_jsonschema(self):
+        self.assertEqual(self.schema.get_jsonschema(), {})
+
+
 class TestString(unittest.TestCase):
 
     def test_jsonschema(self):

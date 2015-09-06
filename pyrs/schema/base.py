@@ -231,7 +231,9 @@ class Base(Schema):
 
     def get_jsonschema(self):
         _type = self.get_attr('type', self._type)
-        schema = SchemaDict(self, {"type": _type})
+        schema = SchemaDict(self)
+        if _type:
+            schema['type'] = _type
         if self.get_attr("null"):
             schema["type"] = lib.ensure_list(_type) + ["null"]
         if self.get_attr("id"):

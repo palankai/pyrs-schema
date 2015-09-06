@@ -12,6 +12,10 @@ from . import exceptions
 from . import formats
 
 
+class Any(base.Base):
+    pass
+
+
 class String(base.Base):
     """
     String specific arguments:
@@ -515,7 +519,7 @@ class TimeDelta(Number):
         )
 
 
-class Enum(base.Base):
+class Enum(Any):
     """JSON generic enum class
 
     :param enum: list of possible values
@@ -529,18 +533,14 @@ class Enum(base.Base):
         :rtype: dict
         """
         schema = super(Enum, self).get_jsonschema()
-        schema.pop('type')
         if self.get_attr('enum'):
             schema['enum'] = self.get_attr('enum')
         return schema
 
 
-class Ref(base.Base):
+class Ref(Any):
 
     def get_jsonschema(self):
-        schema = super(Ref, self).get_jsonschema()
-        schema.pop('type')
-        assert not schema
         return base.SchemaDict(
             self, {'$ref': '#/definitions/'+self.get_attr('ref')}
         )
