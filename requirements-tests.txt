@@ -1,3 +1,5 @@
 flake8
 mock
 coveralls
+testfixtures
+freezegun

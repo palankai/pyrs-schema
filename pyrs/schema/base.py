@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import collections
 import datetime
 import inspect
+import logging
 
 import jsonschema
 import six
@@ -28,7 +29,7 @@ class Set(set):
             super(Set, self).__init__([items])
 
 
-def constraint(code, hint):
+def constraint(code, hint=None):
     def decorate(func):
         func._constraint = code
         func._constraint_hint = hint
@@ -41,6 +42,7 @@ class Schema(object):
     _attrs = None
     _fields = None
     _parent = None
+    _logger = None
 
     def __init__(self, _jsonschema=None, **attrs):
         self._creation_index = Schema._creation_index
@@ -125,6 +127,16 @@ class Schema(object):
     @property
     def fieldname(self):
         return self._attrs.get('fieldname')
+
+    @property
+    def logger(self):
+        if getattr(self, '_logger', None):
+            return self._logger
+        logclass = self._attrs.get(
+            'logger', 'pyrs.schema.'+self.__class__.__name__
+        )
+        self._logger = logging.getLogger(logclass)
+        return self._logger
 
     def getter(self, func):
         self._attrs['getvalue'] = func
@@ -232,6 +244,7 @@ class Base(Schema):
     _type = None
     _attrs = None
     _definitions = None
+    _version = None
 
     def __init__(self, **attrs):
         super(Base, self).__init__(**attrs)
@@ -263,6 +276,8 @@ class Base(Schema):
             schema["default"] = self.get_attr("default")
         if self.get_attr("constraints"):
             schema["constraints"] = self.get_attr("constraints")
+        if self._version:
+            schema["version"] = self._version
         if self._definitions:
             definitions = collections.OrderedDict()
             for name, prop in self._definitions.items():

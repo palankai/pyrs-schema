@@ -1,4 +1,7 @@
+import logging
 import unittest
+
+import testfixtures
 
 from .. import base
 from .. import exceptions
@@ -330,3 +333,41 @@ class TestMixin(unittest.TestCase):
         m = MyType()
 
         self.assertEqual(m._original_field, '345')
+
+
+class TestLogging(unittest.TestCase):
+
+    def test_logger_default(self):
+        s = base.Schema()
+
+        with testfixtures.LogCapture() as l:
+            s.logger.info('message')
+
+        l.check(
+            ('pyrs.schema.Schema', 'INFO', 'message')
+        )
+
+    def test_logger_by_attr(self):
+        s = base.Schema(logger='ns')
+
+        with testfixtures.LogCapture() as l:
+            s.logger.info('message')
+
+        l.check(
+            ('ns', 'INFO', 'message')
+        )
+
+    def test_define_logger(self):
+        logger = logging.getLogger('ns')
+
+        class MySchema(base.Schema):
+            _logger = logger
+
+        s = MySchema()
+
+        with testfixtures.LogCapture() as l:
+            s.logger.info('message')
+
+        l.check(
+            ('ns', 'INFO', 'message')
+        )

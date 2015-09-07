@@ -270,6 +270,8 @@ class Object(base.Base):
         return schema
 
     def _update_jsonschema_properties(self, schema):
+        if not self._fields:
+            return
         required = []
         properties = collections.OrderedDict()
         for key, prop in self._fields.items():
@@ -303,20 +305,23 @@ class Object(base.Base):
         value = value.copy()
         res = {}
         errors = []
-        for field, schema in self._fields.items():
-            name = schema.get_attr('name', field)
+        for fieldname, field in self._fields.items():
+            name = field.get_attr('name', fieldname)
             if name in value:
                 try:
-                    res[field] = schema.to_python(value.pop(name))
+                    res[fieldname] = field.to_python(value.pop(name))
                 except exceptions.ValidationErrors as ex:
                     self._update_errors_by_exception(errors, ex, name)
         res.update(value)
-        for field in self._fields:
-            schema = self._fields.get(field)
-            if field not in res and schema.has_attr('fallback'):
-                res[field] = schema.get_attr('fallback')
-            if schema.has_attr('setvalue'):
-                res[field] = schema.setvalue(schema, res)
+        for fieldname in self._fields:
+            field = self._fields.get(fieldname)
+            if fieldname not in res and field.has_attr('fallback'):
+                res[fieldname] = field.get_attr('fallback')
+            if field.has_attr('setvalue'):
+                if hasattr(field.setvalue, '__func__'):
+                    res[fieldname] = field.setvalue(res)
+                else:
+                    res[fieldname] = field.setvalue(field, res)
         self._raise_exception_when_errors(errors, value)
         return res
 
@@ -344,7 +349,10 @@ class Object(base.Base):
             if name not in res and field.has_attr('fallback'):
                 res[name] = field.get_attr('fallback')
             if field.has_attr('getvalue'):
-                res[name] = field.getvalue(field, value)
+                if hasattr(field.getvalue, '__func__'):
+                    res[name] = field.getvalue(value)
+                else:
+                    res[name] = field.getvalue(field, value)
             if field.is_excluded and name in res:
                 del res[name]
 
@@ -537,6 +545,50 @@ class Password(String):
 
 class Email(String):
     _attrs = {'format': 'email'}
+
+
+class Version(String):
+    _attrs = {
+        'pattern': r'[0-9]+\.[0-9]+(\.[0-9]+)?',
+        'required': True,
+        'logger': 'pyrs.schema.Version',
+        'fallback': '1.0'
+    }
+
+    @base.constraint('version', 'Should be same as in schema')
+    def validate_version(self, version):
+        major, minor, build = self.split_version(version)
+        emajor, eminor, ebuild = self.split_version(self.expected_version)
+        if major != emajor:
+            raise exceptions.ConstraintError(
+                'Major version should be same %s!=%s' % (
+                    version, self.expected_version
+                ),
+                against=self.get_attr('version')
+            )
+        if minor != eminor:
+            self.logger.warning(
+                'Version mismatch %s!=%s', version, self.expected_version
+            )
+        elif build != ebuild:
+            self.logger.debug(
+                'Version mismatch %s!=%s', version, self.expected_version
+            )
+
+    @property
+    def expected_version(self):
+        return self.parent._version or self.get_attr('fallback')
+
+    def split_version(self, version):
+        v = tuple(map(int, version.split('.')))
+        if len(v) == 3:
+            return v
+        return v[0], v[1], 0
+
+    def getvalue(self, value):
+        if self.fieldname in value:
+            assert value[self.fieldname] == self.parent._version
+        return self.parent._version
 
 
 class Enum(Any):

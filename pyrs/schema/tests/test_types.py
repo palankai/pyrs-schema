@@ -1,6 +1,8 @@
 import datetime
 import unittest
 
+import testfixtures
+
 from .. import exceptions
 from .. import types
 
@@ -405,6 +407,92 @@ class TestEmail(unittest.TestCase):
 
         s = s.get_jsonschema()
         self.assertEqual(s, {'type': 'string', 'format': 'email'})
+
+
+class TestVersion(unittest.TestCase):
+
+    def test_version_in_schema(self):
+        class MySchema(types.Object):
+            _version = '1.0.1'
+
+        s = MySchema(additional=None).get_jsonschema()
+
+        self.assertEqual(s, {'type': 'object', 'version': '1.0.1'})
+
+    def test_version_field_in_jsonschema(self):
+        s = types.Version()
+
+        s = s.get_jsonschema()
+        self.assertEqual(
+            s, {
+                'type': 'string',
+                'pattern': r'[0-9]+\.[0-9]+(\.[0-9]+)?',
+                'constraints': {
+                    'version': 'Should be same as in schema'
+                }
+            }
+        )
+
+    def test_version_field_to_raw(self):
+        class MySchema(types.Object):
+            _version = '1.0.1'
+            version = types.Version()
+
+        s = MySchema().to_raw({'version': '1.0.1'})
+        self.assertEqual(
+            s, {'version': '1.0.1'}
+        )
+
+    def test_expected_version(self):
+        field = types.Version()
+
+        class MySchema(types.Object):
+            _version = '1.0.1'
+            version = field
+        MySchema()
+
+        self.assertEqual(field.expected_version, '1.0.1')
+
+    def test_version_field_to_python_does_not_effect(self):
+        class MySchema(types.Object):
+            _version = '1.0.1'
+            version = types.Version()
+
+        s = MySchema().to_python({'version': '2.0.2'})
+        self.assertEqual(
+            s, {'version': '2.0.2'}
+        )
+
+    def test_split_version(self):
+        version = types.Version()
+
+        self.assertEqual(version.split_version('1.0'), (1, 0, 0))
+        self.assertEqual(version.split_version('1.0.1'), (1, 0, 1))
+
+    def test_validatate_version(self):
+        field = types.Version()
+
+        class MySchema(types.Object):
+            _version = '1.2.3'
+            version = field
+        MySchema()
+
+        with self.assertRaises(exceptions.ConstraintError):
+            field.validate_version('2.3.4')
+
+        with testfixtures.LogCapture() as l:
+            field.validate_version('1.3.4')
+
+        l.check(
+            ('pyrs.schema.Version', 'WARNING', 'Version mismatch 1.3.4!=1.2.3')
+        )
+
+        with testfixtures.LogCapture() as l:
+            field.validate_version('1.2.4')
+
+        l.check(
+            ('pyrs.schema.Version', 'DEBUG', 'Version mismatch 1.2.4!=1.2.3')
+        )
 
 
 class TestObject(unittest.TestCase):
