@@ -300,6 +300,8 @@ def _types_msg(instance, types, hint=''):
 def _validate_type_draft4(validator, types, instance, schema):
     if isinstance(types, six.string_types):
         types = [types]
+    if 'null' in types and instance is None:
+        return
     if (
             'string' in types and
             'string' in schema.get('type') and
@@ -325,7 +327,7 @@ def _validate_type_draft4(validator, types, instance, schema):
                 isinstance(instance, (datetime.timedelta, int, float)):
             return
 
-        json_format_name = schema.get_attr('format')
+        json_format_name = schema.get('format')
         datetime_type_name = json_format_name.replace('-', '')
         hint = ' (for format %r strings, use a datetime.%s)' % (
             json_format_name, datetime_type_name

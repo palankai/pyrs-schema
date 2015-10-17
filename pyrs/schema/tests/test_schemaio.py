@@ -72,6 +72,14 @@ class TestJSONSchemaWriter(unittest.TestCase):
         self.assertEqual(s, '{"type": "string"}')
 
 
+class TestJSONSchemaNullValidator(unittest.TestCase):
+
+    def test_null_date(self):
+        t1 = types.AnyOf(types.Date(), types.Null())
+        io = schemaio.JSONSchemaValidator(t1)
+        io.validate(None)
+
+
 class TestJSONSchemaValidator(unittest.TestCase):
 
     def test_validation_error(self):

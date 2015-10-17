@@ -375,6 +375,86 @@ class TestTimeDelta(unittest.TestCase):
             self.schema.to_raw(datetime.date(2012, 3, 11))
 
 
+class TestNullableDate(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.Date(null=True)
+
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(),
+            {'type': ['string', 'null'], 'format': 'date'}
+        )
+
+    def test_to_python_None(self):
+        v = self.schema.to_python(None)
+        self.assertEqual(v, None)
+
+    def test_to_raw_None(self):
+        v = self.schema.to_raw(None)
+        self.assertEqual(v, None)
+
+
+class TestNullableTime(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.Time(null=True)
+
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(),
+            {'type': ['string', 'null'], 'format': 'time'}
+        )
+
+    def test_to_python_None(self):
+        v = self.schema.to_python(None)
+        self.assertEqual(v, None)
+
+    def test_to_raw_None(self):
+        v = self.schema.to_raw(None)
+        self.assertEqual(v, None)
+
+
+class TestNullableDateTime(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.DateTime(null=True)
+
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(),
+            {'type': ['string', 'null'], 'format': 'datetime'}
+        )
+
+    def test_to_python_None(self):
+        v = self.schema.to_python(None)
+        self.assertEqual(v, None)
+
+    def test_to_raw_None(self):
+        v = self.schema.to_raw(None)
+        self.assertEqual(v, None)
+
+
+class TestNullableDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.Duration(null=True)
+
+    def test_jsonschema(self):
+        self.assertEqual(
+            self.schema.get_jsonschema(),
+            {'type': ['string', 'null'], 'format': 'duration'}
+        )
+
+    def test_to_python_None(self):
+        v = self.schema.to_python(None)
+        self.assertEqual(v, None)
+
+    def test_to_raw_None(self):
+        v = self.schema.to_raw(None)
+        self.assertEqual(v, None)
+
+
 class TestPassword(unittest.TestCase):
 
     def test_to_raw(self):
@@ -512,3 +592,96 @@ class TestObject(unittest.TestCase):
             data,
             {'username': 'admin', 'password': 'secret', 'pk': 1}
         )
+
+
+class TestNull(unittest.TestCase):
+
+    def test_jsonschema(self):
+        s = types.Null()
+
+        s = s.get_jsonschema()
+        self.assertEqual(s, {'type': 'null'})
+
+
+class TestAnyOf(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.AnyOf(types.Date(), types.Null())
+
+    def test_jsonschema(self):
+        s = self.schema.get_jsonschema()
+        self.assertEqual(s, {
+            "anyOf": [
+                {'type': 'string', 'format': 'date'},
+                {'type': 'null'}
+            ]
+        })
+
+    def test_to_python_date(self):
+        v = self.schema.to_python('2012-12-24')
+        self.assertEqual(v, datetime.date(2012, 12, 24))
+
+    def test_to_python_null(self):
+        v = self.schema.to_python(None)
+        self.assertIsNone(v)
+
+    def test_to_raw_date(self):
+        v = self.schema.to_raw(datetime.date(2012, 12, 24))
+        self.assertEqual(v, '2012-12-24')
+
+    def test_to_raw_null(self):
+        v = self.schema.to_raw(None)
+        self.assertIsNone(v)
+
+
+class TestAllOf(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.AllOf(types.Date(), types.String())
+
+    def test_jsonschema(self):
+        s = self.schema.get_jsonschema()
+        self.assertEqual(s, {
+            "allOf": [
+                {'type': 'string', 'format': 'date'},
+                {'type': 'string'}
+            ]
+        })
+
+    def test_to_python_date(self):
+        v = self.schema.to_python('2012-12-24')
+        self.assertEqual(v, datetime.date(2012, 12, 24))
+
+    def test_to_raw_date(self):
+        v = self.schema.to_raw(datetime.date(2012, 12, 24))
+        self.assertEqual(v, '2012-12-24')
+
+
+class TestOneOf(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.OneOf(types.Date(), types.Integer())
+
+    def test_jsonschema(self):
+        s = self.schema.get_jsonschema()
+        self.assertEqual(s, {
+            "oneOf": [
+                {'type': 'string', 'format': 'date'},
+                {'type': 'integer'}
+            ]
+        })
+
+
+class TestNot(unittest.TestCase):
+
+    def setUp(self):
+        self.schema = types.Not(types.Date(), types.Integer())
+
+    def test_jsonschema(self):
+        s = self.schema.get_jsonschema()
+        self.assertEqual(s, {
+            "not": [
+                {'type': 'string', 'format': 'date'},
+                {'type': 'integer'}
+            ]
+        })

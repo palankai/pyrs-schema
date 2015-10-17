@@ -137,8 +137,11 @@ class JSONSchemaValidator(Validator):
 
     def _raise_exception_when_errors(self, errors, data):
         if errors:
+            message = '%s validation error(s) raised\n' % len(errors)
+            for error in errors:
+                message += '\n - %s %s' % (error['path'], error['message'])
             raise exceptions.ValidationErrors(
-                '%s validation error(s) raised' % len(errors),
+                message,
                 value=data,
                 errors=errors
             )

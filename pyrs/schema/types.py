@@ -378,6 +378,8 @@ class Date(String):
     _attrs = {'format': 'date'}
 
     def to_python(self, value):
+        if value is None:
+            return None
         if isinstance(value, datetime.date):
             return value
         try:
@@ -391,6 +393,8 @@ class Date(String):
             )
 
     def to_raw(self, value):
+        if value is None:
+            return None
         if isinstance(value, datetime.date):
             return isodate.date_isoformat(value)
         if isinstance(value, six.string_types):
@@ -408,6 +412,8 @@ class Time(String):
     _attrs = {'format': 'time'}
 
     def to_python(self, value):
+        if value is None:
+            return None
         if isinstance(value, datetime.time):
             return value
         try:
@@ -421,6 +427,8 @@ class Time(String):
             )
 
     def to_raw(self, value):
+        if value is None:
+            return None
         if isinstance(value, datetime.time):
             return isodate.time_isoformat(value)
         if isinstance(value, six.string_types):
@@ -438,6 +446,8 @@ class DateTime(String):
     _attrs = {'format': 'datetime'}
 
     def to_python(self, value):
+        if value is None:
+            return None
         if isinstance(value, datetime.datetime):
             return value
         try:
@@ -451,6 +461,8 @@ class DateTime(String):
             )
 
     def to_raw(self, value):
+        if value is None:
+            return None
         if isinstance(value, datetime.datetime):
             return isodate.datetime_isoformat(value)
         if isinstance(value, six.string_types):
@@ -468,6 +480,8 @@ class Duration(String):
     _attrs = {'format': 'duration'}
 
     def to_python(self, value):
+        if value is None:
+            return None
         if isinstance(value, (int, float)):
             return datetime.timedelta(seconds=value)
         if isinstance(value, datetime.timedelta):
@@ -483,6 +497,8 @@ class Duration(String):
             )
 
     def to_raw(self, value):
+        if value is None:
+            return None
         if isinstance(value, datetime.timedelta):
             return isodate.duration_isoformat(value)
         if isinstance(value, (int, float)):
@@ -616,3 +632,77 @@ class Ref(Any):
         return base.SchemaDict(
             self, {'$ref': '#/definitions/'+self.get_attr('ref')}
         )
+
+
+class Null(Any):
+    """
+    Generic null type
+    """
+
+    def get_jsonschema(self):
+        return base.SchemaDict(
+            self, {'type': 'null'}
+        )
+
+
+class MultiSchema(base.Schema):
+
+    _type = None
+
+    def __init__(self, *_types, **attrs):
+        super(MultiSchema, self).__init__(**attrs)
+        self._types = _types
+
+    def get_jsonschema(self):
+        schemas = [
+            s.get_jsonschema() for s in self._types
+        ]
+        return base.SchemaDict(
+            self, {self._type: schemas}
+        )
+
+
+class AnyOf(MultiSchema):
+
+    _type = "anyOf"
+
+    def to_python(self, value):
+        last_exception = None
+        for t in self._types:
+            try:
+                return t.to_python(value)
+            except Exception as e:
+                last_exception = e
+        if last_exception:
+            raise last_exception
+
+    def to_raw(self, value):
+        last_exception = None
+        for t in self._types:
+            try:
+                return t.to_raw(value)
+            except Exception as e:
+                last_exception = e
+        if last_exception:
+            raise last_exception
+
+
+class Not(MultiSchema):
+
+    _type = "not"
+
+
+class OneOf(AnyOf):
+
+    _type = "oneOf"
+
+
+class AllOf(MultiSchema):
+
+    _type = "allOf"
+
+    def to_python(self, value):
+        return self._types[0].to_python(value)
+
+    def to_raw(self, value):
+        return self._types[0].to_raw(value)
